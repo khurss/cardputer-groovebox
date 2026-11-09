@@ -57,6 +57,35 @@ class TableTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             slot.ota_index(DEVICE, "missing")
 
+    def test_otadata_image_clears_both_sectors(self):
+        image = slot.otadata_image(1)
+        self.assertEqual(len(image), 0x2000)
+        self.assertEqual(image[:0x1000], slot.otadata_sector(1))
+        self.assertEqual(image[0x1000:], b"\xff" * 0x1000)
+
+
+class ArgumentTests(unittest.TestCase):
+    def test_no_command_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py"])
+
+    def test_unknown_command_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "flash"])
+
+    def test_install_without_path_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "install"])
+
+    def test_select_without_label_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "select"])
+
+    def test_valid_forms_are_accepted(self):
+        slot.validate_args(["slot.py", "install", "x"])
+        slot.validate_args(["slot.py", "select", "glide"])
+        slot.validate_args(["slot.py", "remove-probe"])
+
 
 if __name__ == "__main__":
     unittest.main()

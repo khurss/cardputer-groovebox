@@ -68,6 +68,23 @@ def otadata_sector(index):
     return (seq + b"\xff" * 24 + struct.pack("<I", crc)).ljust(0x1000, b"\xff")
 
 
+def otadata_image(index):
+    return otadata_sector(index) + b"\xff" * 0x1000
+
+
+def validate_args(argv):
+    usage = "usage: slot.py install <bin> | select <label> | remove-probe"
+    if len(argv) < 2:
+        sys.exit(usage)
+    command = argv[1]
+    if command == "install" and len(argv) < 3:
+        sys.exit(usage)
+    if command == "select" and len(argv) < 3:
+        sys.exit(usage)
+    if command not in ("install", "select", "remove-probe"):
+        sys.exit(f"unknown command {command}")
+
+
 def esptool(*args):
     gid = os.stat(PORT).st_gid
     image = os.environ.get("GB_IDF_IMAGE", "cbc2e2ec2afe")
@@ -93,8 +110,7 @@ def read_entries(work):
 
 
 def main(argv):
-    if len(argv) < 2:
-        sys.exit("usage: slot.py install <bin> | select <label> | remove-probe")
+    validate_args(argv)
     (ROOT / ".tmp").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(dir=ROOT / ".tmp") as work:
         entries = read_entries(work)
@@ -105,14 +121,12 @@ def main(argv):
             table = add_probe(entries)
             write(work, PROBE_OFFSET, app)
             write(work, TABLE_OFFSET, build(table))
-            write(work, OTADATA_OFFSET, otadata_sector(ota_index(table, "probe")))
+            write(work, OTADATA_OFFSET, otadata_image(ota_index(table, "probe")))
         elif argv[1] == "select":
-            write(work, OTADATA_OFFSET, otadata_sector(ota_index(entries, argv[2])))
+            write(work, OTADATA_OFFSET, otadata_image(ota_index(entries, argv[2])))
         elif argv[1] == "remove-probe":
-            write(work, OTADATA_OFFSET, otadata_sector(ota_index(entries, "glide")))
+            write(work, OTADATA_OFFSET, otadata_image(ota_index(entries, "glide")))
             write(work, TABLE_OFFSET, build(remove_probe(entries)))
-        else:
-            sys.exit(f"unknown command {argv[1]}")
 
 
 if __name__ == "__main__":
