@@ -77,8 +77,11 @@ def validate_args(argv):
     if len(argv) < 2:
         sys.exit(usage)
     command = argv[1]
-    if command == "install" and len(argv) < 3:
-        sys.exit(usage)
+    if command == "install":
+        if len(argv) < 3:
+            sys.exit(usage)
+        if not Path(argv[2]).is_file():
+            sys.exit(f"probe image not found: {argv[2]}")
     if command == "select" and len(argv) < 3:
         sys.exit(usage)
     if command not in ("install", "select", "remove-probe"):

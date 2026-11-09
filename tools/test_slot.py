@@ -1,5 +1,6 @@
 import hashlib
 import struct
+import tempfile
 import unittest
 
 import slot
@@ -81,8 +82,13 @@ class ArgumentTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             slot.validate_args(["slot.py", "select"])
 
+    def test_install_with_missing_file_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "install", "/nonexistent/path"])
+
     def test_valid_forms_are_accepted(self):
-        slot.validate_args(["slot.py", "install", "x"])
+        with tempfile.NamedTemporaryFile() as image:
+            slot.validate_args(["slot.py", "install", image.name])
         slot.validate_args(["slot.py", "select", "glide"])
         slot.validate_args(["slot.py", "remove-probe"])
 
