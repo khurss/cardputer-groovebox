@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -30,6 +31,18 @@ int zeroCrossings(const std::vector<float>& samples, size_t count) {
     for (size_t i = 1; i < count && i < samples.size(); ++i)
         crossings += (samples[i - 1] < 0.0f) != (samples[i] < 0.0f);
     return crossings;
+}
+
+float meanAbs(const std::vector<float>& samples, size_t from, size_t to) {
+    float total = 0.0f;
+    for (size_t i = from; i < to; ++i) total += std::fabs(samples[i]);
+    return total / static_cast<float>(to - from);
+}
+
+float sumAbs(const std::vector<float>& samples, size_t count) {
+    float total = 0.0f;
+    for (size_t i = 0; i < count && i < samples.size(); ++i) total += std::fabs(samples[i]);
+    return total;
 }
 
 // Last frame still above a small level.
@@ -126,4 +139,31 @@ TEST(outOfRangeLaneIsIgnored) {
     DrumRack rack(kRate);
     rack.trigger(200, 127, DrumSound{});
     CHECK_EQ(rack.render() == 0.0f, true);
+}
+
+TEST(clapHasDistinctBursts) {
+    const auto samples = play(Clap);
+    CHECK_EQ(meanAbs(samples, 360, 384) * 2.0f < meanAbs(samples, 384, 408), true);
+}
+
+TEST(tuneMovesHatBrightness) {
+    DrumSound low, high;
+    low.tune = 10;
+    high.tune = 120;
+    CHECK_EQ(zeroCrossings(play(ClosedHat, high), 2000) > zeroCrossings(play(ClosedHat, low), 2000), true);
+}
+
+TEST(toneDrivesTonalVoices) {
+    DrumSound dark, bright;
+    dark.tone = 10;
+    bright.tone = 120;
+    CHECK_EQ(sumAbs(play(Kick, bright), 2000) > sumAbs(play(Kick, dark), 2000) * 1.2f, true);
+}
+
+TEST(snareKeepsItsBody) {
+    DrumSound sound;
+    sound.tone = 10;
+    const auto samples = play(Snare, sound);
+    CHECK_EQ(zeroCrossings(samples, 2000) > 0, true);
+    CHECK_EQ(peak(samples) > 0.05f, true);
 }

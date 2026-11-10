@@ -29,6 +29,7 @@ constexpr Preset kPresets[kDrumLanes] = {
 
 constexpr float kTwoPi = 6.2831853f;
 constexpr float kBurstSeconds = 0.012f;
+constexpr float kBurstDecaySeconds = 0.004f;
 constexpr float kSilence = 0.0005f;
 
 float exponential(uint8_t value, float low, float high) { return low * std::pow(high / low, value / 127.0f); }
@@ -36,6 +37,8 @@ float exponential(uint8_t value, float low, float high) { return low * std::pow(
 float decayCoefficient(float seconds, uint32_t rate) { return std::exp(-1.0f / (seconds * static_cast<float>(rate))); }
 
 float atMost(float value, float limit) { return value < limit ? value : limit; }
+
+float clampUnit(float value) { return value > 1.0f ? 1.0f : (value < -1.0f ? -1.0f : value); }
 
 }  // namespace
 
@@ -61,7 +64,9 @@ void DrumRack::trigger(uint8_t lane, uint8_t velocity, const DrumSound& sound) {
     voice.amplitude = 1.0f;
     voice.amplitudeCoefficient = decayCoefficient(preset.decay * exponential(sound.decay, 0.25f, 4.0f), rate_);
     voice.noiseMix = atMost(preset.noise * brightness, 1.0f);
-    voice.highpass = atMost(preset.highpass * brightness, 0.95f);
+    voice.highpass = atMost(preset.highpass * brightness * (preset.frequency == 0.0f ? exponential(sound.tune, 0.6f, 1.4f) : 1.0f), 0.95f);
+    voice.drive = exponential(sound.tone, 0.7f, 3.0f);
+    voice.burstCoefficient = decayCoefficient(kBurstDecaySeconds, rate_);
     voice.lowState = 0.0f;
     voice.gain = (velocity / 127.0f) * (sound.level / 127.0f);
     voice.burstsLeft = preset.bursts;
@@ -74,17 +79,20 @@ float DrumRack::render() {
     for (Voice& voice : voices_) {
         if (!voice.active) continue;
         const float noise = nextNoise();
-        const float tonal = std::sin(kTwoPi * voice.phase);
+        const float tonal = voice.baseStep > 0.0f && voice.noiseMix < 1.0f
+                                ? clampUnit(std::sin(kTwoPi * voice.phase) * voice.drive)
+                                : 0.0f;
         voice.phase += voice.baseStep * (1.0f + voice.pitchDepth * voice.pitchEnvelope);
         if (voice.phase >= 1.0f) voice.phase -= std::floor(voice.phase);
         voice.pitchEnvelope *= voice.pitchCoefficient;
+        if (voice.pitchEnvelope < 1e-6f) voice.pitchEnvelope = 0.0f;
 
-        const float raw = tonal * (1.0f - voice.noiseMix) + noise * voice.noiseMix;
-        voice.lowState += voice.highpass * (raw - voice.lowState);
-        const float filtered = voice.highpass > 0.0f ? raw - voice.lowState : raw;
-        mix += filtered * voice.amplitude * voice.gain;
+        // Only the noise is filtered, so a drum's body keeps its low end.
+        voice.lowState += voice.highpass * (noise - voice.lowState);
+        const float filteredNoise = voice.highpass > 0.0f ? noise - voice.lowState : noise;
+        mix += (tonal * (1.0f - voice.noiseMix) + filteredNoise * voice.noiseMix) * voice.amplitude * voice.gain;
 
-        voice.amplitude *= voice.amplitudeCoefficient;
+        voice.amplitude *= voice.burstsLeft > 0 ? voice.burstCoefficient : voice.amplitudeCoefficient;
         if (voice.burstsLeft > 0 && --voice.burstTimer == 0) {
             voice.amplitude = 1.0f;
             --voice.burstsLeft;

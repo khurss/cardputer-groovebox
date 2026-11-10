@@ -24,6 +24,8 @@ private:
         float pitchCoefficient = 0.0f;
         float amplitude = 0.0f;
         float amplitudeCoefficient = 0.0f;
+        float burstCoefficient = 0.0f;
+        float drive = 1.0f;
         float noiseMix = 0.0f;
         float highpass = 0.0f;
         float lowState = 0.0f;
