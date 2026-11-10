@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <vector>
 
@@ -119,7 +121,7 @@ TEST(outputNeverClipsWithAllLanes) {
     engine.handle(make(CommandType::Play));
     const auto samples = run(engine, 8192);
     CHECK_EQ(peak(samples) > 3000, true);
-    CHECK_EQ(peak(samples) <= 32767, true);
+    CHECK_EQ(peak(samples) <= 31500, true);
 }
 
 TEST(channelsMatch) {

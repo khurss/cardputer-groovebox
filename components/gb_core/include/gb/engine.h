@@ -9,7 +9,8 @@
 
 namespace gb {
 
-// Turns the project into audio. Every member except sceneTick() belongs to the audio task.
+// Turns the project into audio. playing() and sceneTick() are safe to read from another task;
+// everything else belongs to the audio task.
 class Engine {
 public:
     Engine(Project& project, uint32_t sampleRate);
@@ -17,7 +18,7 @@ public:
     void handle(const Command& command);
     void render(int16_t* stereo, uint32_t frames);
 
-    bool playing() const { return sequencer_.playing(); }
+    bool playing() const { return playing_.load(std::memory_order_relaxed); }
     uint32_t sceneTick() const { return sceneTick_.load(std::memory_order_relaxed); }
 
 private:
@@ -31,6 +32,7 @@ private:
     float limiterGain_ = 1.0f;
     float releaseCoefficient_;
     std::atomic<uint32_t> sceneTick_{0};
+    std::atomic<bool> playing_{false};
     Event events_[kMaxEvents];
 };
 

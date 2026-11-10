@@ -57,6 +57,7 @@ void Engine::render(int16_t* stereo, uint32_t frames) {
         stereo[frame * 2 + 1] = output;
     }
     sceneTick_.store(sequencer_.sceneTick(), std::memory_order_relaxed);
+    playing_.store(sequencer_.playing(), std::memory_order_relaxed);
 }
 
 }  // namespace gb
