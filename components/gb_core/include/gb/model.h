@@ -69,10 +69,18 @@ struct SongEntry {
     uint8_t repeats = 1;
 };
 
+struct DrumSound {
+    uint8_t tune = 64;
+    uint8_t decay = 64;
+    uint8_t tone = 64;
+    uint8_t level = 100;
+};
+
 struct Project {
     uint16_t bpm = 120;
     uint8_t swing = 50;
     bool swingEnabled[kTracks] = {true, true, true, true, true};
+    DrumSound sounds[kDrumLanes];
     DrumPattern drums[kPatternsPerTrack];
     InstrumentPattern instruments[kInstrumentTracks][kPatternsPerTrack];
     Scene scenes[kScenes];
