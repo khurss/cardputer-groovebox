@@ -7,13 +7,14 @@ namespace gb {
 namespace {
 const char* const lessons[][7] = {
     {"WELCOME / 1", "Make a beat, play a melody,", "then arrange a whole track.", "", "OPT opens the menu.", "Fn is only a modifier now.", "No popup while you play."},
-    {"MOVE AROUND / 2", "OPT > SCREENS: choose a workspace.", "Fn + arrows: move selection.", "ENTER: choose / edit / confirm.", "TAB: next menu section.", "BACKSPACE: back. OPT: close.", "+ / -: master volume."},
+    {"MOVE AROUND / 2", "OPT > SCREENS: choose a workspace.", "Arrows: move selection.", "ENTER: choose / edit / confirm.", "TAB: next menu section.", "BACKSPACE: back. OPT: close.", "+ / -: master volume."},
     {"DRUMS / 3", "Fn+1: drums. 1..8 choose a sound.", "Q W E R T Y U I = steps 1..8", "A S D F G H J K = steps 9..16", "Tap steps to add/remove hits.", "SHIFT + step: accented hit.", "SPACE plays / stops the scene."},
-    {"SYNTH / 4", "Fn+2: synth. OPT > ACTIONS.", "Choose Performance for strings.", "Lines follow pitch; dots show fingers.", "Each keyboard row is one string.", "SETTINGS: scale, root and sound.", "Piano roll remains available."},
-    {"RECORD NOTES / 5", "ALT arms notes. SPACE starts.", "Play keys; notes appear live.", "ALT ends the recording pass.", "Piano roll: Fn+arrows to move.", "ENTER adds/selects; BS deletes.", "ACTIONS > Undo reverts a pass."},
+    {"SYNTH / 4", "Fn+2: Performance. ESC: piano roll.", "ACTIONS > Performance: strings.", "Lines follow pitch; dots show fingers.", "Each keyboard row is one string.", "SETTINGS: scale, root and sound.", "Piano roll remains available."},
+    {"RECORD NOTES / 5", "ALT arms notes. SPACE starts.", "Play keys; notes appear live.", "ALT ends the recording pass.", "Piano roll: Arrows to move.", "ENTER adds/selects; BS deletes.", "ACTIONS > Undo reverts a pass."},
     {"SAMPLES / 6", "Fn+6: sampler. Put WAV on SD in", "/groovebox/samples/", "ACTIONS: Browse WAV or Record mic.", "Wave view: A=start, D=end.", "ENTER saves a slice to a pad.", "Pad sequencer places sample hits."},
     {"BUILD A SONG / 7", "Fn+3: scenes combine patterns.", "Choose track and assigned pattern.", "Fn+4: song. Insert scenes via menu.", "Set repeats, ENTER plays from row.", "Fn+5: mixer levels / mute / solo.", "SPACE stops. + / - sets volume."},
-    {"KEEP YOUR WORK / 8", "OPT > SCREENS > Projects.", "New: blank project with a name.", "Save: write current project.", "Save copy: keep another version.", "Open: saves current, then reloads.", "Auto-save: stopped, 3 seconds idle."}
+    {"KEEP YOUR WORK / 8", "OPT > SCREENS > Projects.", "New: blank project with a name.", "Save: write current project.", "Save copy: keep another version.", "Open: saves current, then reloads.", "Auto-save: stopped, 3 seconds idle."},
+    {"AUDIO VISUALS / 9", "Fn+7: mixer with live FFT spectrum.", "Fn+8: four audio visualizations.", "LEFT/RIGHT: view. UP/DOWN: gain.", "P: palette. OPT > SETTINGS: motion.", "RGB brightness: 0 disables the LED.", "RGB on uses full display backlight."}
 };
 }
 ProjectAction AppUi::takeProjectRequest(char* name, size_t size) {
@@ -28,16 +29,17 @@ void AppUi::projectResult(const char* message) {
 }
 void AppUi::helpKey(char code) {
     if (code == key::Opt || code == key::Backspace || code == 27) { helpOpen_ = false; dirty_ = true; return; }
-    if (code == key::Enter || code == key::Tab || (fn_ && (code == '/' || code == '.')))
-        helpPage_ = (helpPage_ + 1) % 9;
-    if (fn_ && (code == ',' || code == ';')) helpPage_ = (helpPage_ + 8) % 9;
+    if (code == key::Enter || code == key::Tab || (code == '/' || code == '.'))
+        helpPage_ = (helpPage_ + 1) % (kTutorialPages + 1);
+    if (code == ',' || code == ';') helpPage_ = (helpPage_ + kTutorialPages) % (kTutorialPages + 1);
 }
 void AppUi::drawHelp(Canvas& c) const {
-    if (helpPage_ == 8) { drawFnMenu(c); return; }
+    static_assert(sizeof(lessons)/sizeof(lessons[0]) == kTutorialPages);
+    if (helpPage_ == kTutorialPages) { drawFnMenu(c); return; }
     c.fillRect(0, 0, 240, 135, color::Background);
     style::header(c,lessons[helpPage_][0],nullptr);
     for (int i = 1; i < 7; ++i) c.text(5, 19 + i * 13, lessons[helpPage_][i], color::Text);
-    style::footer(c,"Enter next  Fn LEFT prev  Esc close");
+    style::footer(c,"Enter next  LEFT prev  Esc close");
 }
 void AppUi::projectsKey(char code) {
     if (code == key::Esc && (nameAction_ != ProjectAction::None || projectConfirm_)) {
@@ -61,8 +63,8 @@ void AppUi::projectsKey(char code) {
         if (code == key::Enter) { projectRequest_ = ProjectAction::Load; projectConfirm_ = false; }
         return;
     }
-    if (fn_ && code == ';' && projectRow_) --projectRow_;
-    if (fn_ && code == '.' && projectRow_ < 3 + library_.count) ++projectRow_;
+    if (code == ';' && projectRow_) --projectRow_;
+    if (code == '.' && projectRow_ < 3 + library_.count) ++projectRow_;
     if (code != key::Enter) return;
     if (!library_.available) { projectResult("SD card unavailable"); return; }
     if (busy() || observedPlaying_ || transportPending_) { projectResult("Stop playback / recording first"); return; }
@@ -100,6 +102,6 @@ void AppUi::drawProjects(Canvas& c) const {
         }
         c.text(4, 106, library_.message[0] ? library_.message : library_.more ? "First 32 files shown" : "Select a file to open it", color::StepAccent);
     }
-    style::footer(c,"Fn arrows choose  Enter  Esc back");
+    style::footer(c,"Arrows choose  Enter  Esc back");
 }
 }

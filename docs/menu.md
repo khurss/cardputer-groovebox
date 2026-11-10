@@ -12,16 +12,16 @@ to the piano roll.
 
 ## Three tabs
 
-- **SCREENS**: Drums, Synth, Scenes, Song, Mixer, Sampler, Projects, Quick start and
-  Key reference.
+- **SCREENS**: Drums, Synth, Scenes, Song, Mixer, Sampler, Projects, Quick start,
+  Key reference, Mixer FFT and Visuals.
 - **ACTIONS**: commands for the current workspace, such as play, record, copy,
   paste, undo and clear. The sampler also offers WAV browsing, selection bounds,
   slice saving and chopping.
 - **SETTINGS**: master volume, tempo, swing and parameters for the current workspace.
 
-Use `Fn+↑/↓` to select a row. `Tab`, `Fn+←/→` or `[` / `]` changes tabs.
-In SCREENS, `Enter` opens the selected screen; `1..6` opens a workspace directly.
-`Fn+1..6` works from any menu tab.
+Use `↑/↓` to select a row. `Tab`, `←/→` or `[` / `]` changes tabs.
+In SCREENS, `Enter` opens the selected screen; `1..8` opens a workspace directly.
+`Fn+1..8` works from any menu tab.
 
 In SETTINGS, press `Enter` to highlight a value in yellow. Use the arrows to change
 it, then `Enter` to finish editing. `Backspace` or `Esc` first leaves value editing,
@@ -35,7 +35,7 @@ clear display a result message.
 
 ## Available settings
 
-All workspaces expose master volume, tempo and swing, plus:
+All workspaces expose master volume, tempo, swing and RGB brightness, plus:
 
 | Workspace | Additional settings |
 |---|---|
@@ -45,6 +45,9 @@ All workspaces expose master volume, tempo and swing, plus:
 | Song | Row, scene to insert, entry scene and repeats |
 | Mixer | Channel, channel level, mute and solo |
 | Sampler | Pad, assigned slot, pattern, chop count, length and grid; slot selection shows the source WAV filename |
+
+FFT mixer and Visuals also expose [palette, sensitivity and smoothing](audio-visuals.md).
+Visuals adds mode and motion speed. Display preferences save separately from projects.
 
 ## Actions and recording
 

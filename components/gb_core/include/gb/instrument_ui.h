@@ -38,7 +38,7 @@ public:
     bool parametersVisible() const { return parameters_; }
     bool canUndo() const { return undoAvailable_; }
     bool canPaste() const { return clipboardFull_; }
-    void showPerformance();
+    void showPerformance(bool configureSound = true);
     void showPianoRoll() { releaseLive(); performance_ = parameters_ = false; dirty_ = true; }
     bool performanceVisible() const { return performance_; }
     void setKeyboard(uint8_t parameter, uint8_t value);

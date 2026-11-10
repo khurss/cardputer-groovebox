@@ -204,3 +204,48 @@ int cardFilesystem() {
 }
 
 }  // namespace hw
+
+// The Stamp-S3A RGB data pin is G21. G38 is shared with LCD backlight;
+// the UI sets full backlight while RGB is enabled (M5Stack Cardputer-Adv pin map).
+#include "driver/rmt_tx.h"
+namespace hw {
+namespace {
+rmt_channel_handle_t rgbChannel = nullptr;
+rmt_encoder_handle_t rgbEncoder = nullptr;
+rmt_symbol_word_t rgbSymbols[25];
+}
+bool initRgb() {
+    rmt_tx_channel_config_t config = {};
+    config.gpio_num = GPIO_NUM_21;
+    config.clk_src = RMT_CLK_SRC_DEFAULT;
+    config.resolution_hz = 10000000;
+    config.mem_block_symbols = 48;
+    config.trans_queue_depth = 1;
+    if (rmt_new_tx_channel(&config, &rgbChannel) != ESP_OK) return false;
+    rmt_copy_encoder_config_t encoder = {};
+    if (rmt_new_copy_encoder(&encoder, &rgbEncoder) != ESP_OK) {
+        rmt_del_channel(rgbChannel); rgbChannel = nullptr; return false;
+    }
+    if (rmt_enable(rgbChannel) != ESP_OK) {
+        rmt_del_encoder(rgbEncoder); rmt_del_channel(rgbChannel);
+        rgbChannel = nullptr; rgbEncoder = nullptr; return false;
+    }
+    return setRgb(0);
+}
+bool setRgb(uint32_t rgb) {
+    if (!rgbChannel || !rgbEncoder) return false;
+    // Do not reuse the payload until the previous transaction has completed.
+    if (rmt_tx_wait_all_done(rgbChannel, 10) != ESP_OK) return false;
+    uint32_t grb = ((rgb & 0xff00) << 8) | ((rgb >> 8) & 0xff00) | (rgb & 0xff);
+    for (unsigned i=0;i<24;++i) {
+        bool one = grb & (1u << (23-i));
+        rgbSymbols[i].level0 = 1; rgbSymbols[i].duration0 = one ? 8 : 4;
+        rgbSymbols[i].level1 = 0; rgbSymbols[i].duration1 = one ? 4 : 8;
+    }
+    rgbSymbols[24].level0 = rgbSymbols[24].level1 = 0;
+    rgbSymbols[24].duration0 = rgbSymbols[24].duration1 = 2000; // 400 us reset
+    rmt_transmit_config_t txConfig = {};
+    if (rmt_transmit(rgbChannel, rgbEncoder, rgbSymbols, sizeof(rgbSymbols), &txConfig) != ESP_OK) return false;
+    return rmt_tx_wait_all_done(rgbChannel, 10) == ESP_OK;
+}
+}

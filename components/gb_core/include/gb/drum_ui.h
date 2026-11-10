@@ -18,6 +18,7 @@ public:
     void activate();
     void shortcut(char code) { dirty_ = true; if (code != 'g') gridRun_ = false; onFnPress(code); }
     void setTiming(bool grid, uint16_t value);
+    void navigate(char arrow);
     void changePattern(int direction) { selectPattern(pattern_ + direction); }
     void draw(Canvas& canvas, uint32_t sceneTick, bool playing, bool storageAvailable) const;
 

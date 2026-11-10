@@ -476,7 +476,7 @@ void InstrumentUi::draw(Canvas& c, uint32_t tick, bool playing, bool storageAvai
     style::header(c, line, nullptr, style::tracks[track_ + 1]);
     if (performance_) { drawPerformance(c); return; }
     if (parameters_) {
-        c.text(3, 25, "SOUND / Fn+arrows select & adjust", color::Text);
+        c.text(3, 25, "SOUND / Arrows select & adjust", color::Text);
         for (uint8_t p = 0; p < 9; ++p) {
             const int x = 3 + (p % 3) * 79, y = 38 + (p / 3) * 23;
             const bool active = p == parameter_;
@@ -608,10 +608,10 @@ void InstrumentUi::setKeyboard(uint8_t parameter, uint8_t value) {
     rememberCommand(CommandType::SetKeyboard, parameter, old[parameter]);
     apply(cmd(CommandType::SetKeyboard, track_, parameter, 0, value));
 }
-void InstrumentUi::showPerformance() {
+void InstrumentUi::showPerformance(bool configureSound) {
     if (locked_) return;
     releaseLive();
-    if (!project_.keyboardLayout[track_]) {
+    if (configureSound && !project_.keyboardLayout[track_]) {
         setKeyboard(0, 1); setKeyboard(2, 2);
         if (!project_.synths[track_].glide) loadPreset(0);
     }

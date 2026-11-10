@@ -16,6 +16,8 @@ struct AudioStats {
 bool initBus();
 bool initAudio();
 bool initKeyboard();
+bool initRgb();
+bool setRgb(uint32_t rgb);
 // Moves one audio block out and one in. Both buffers hold kBlockFrames stereo frames.
 bool exchangeAudio(const int16_t* output, int16_t* input);
 AudioStats audioStats();

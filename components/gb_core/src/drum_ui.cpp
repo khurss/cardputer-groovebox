@@ -67,6 +67,14 @@ void DrumUi::apply(const Command& out) {
     send(out);
 }
 
+void DrumUi::navigate(char arrow) {
+    dirty_ = true;
+    if (arrow == ',' || arrow == '/') changePattern(arrow == '/' ? 1 : -1);
+    else {
+        int lane = lane_ + (arrow == '.' ? 1 : -1);
+        if (lane >= 0 && lane < kDrumLanes) selectLane('1' + lane);
+    }
+}
 void DrumUi::onKey(char code, bool pressed) {
     if (code == key::Fn) fn_ = pressed;
     else if (code == key::Shift) shift_ = pressed;

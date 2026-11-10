@@ -207,7 +207,7 @@ void SamplerUi::draw(Canvas& c,uint32_t tick,bool playing) const {
             snprintf(text,sizeof(text),"%.34s",names_[i]);c.text(23,y+3,text,i==file_?color::Text:color::Muted);
         }
         if(visible_>6){c.fillRect(237,32,2,82,color::StepOff);c.fillRect(237,32+file_*70/(visible_-1),2,12,color::StepOn);}
-        style::footer(c,pending_?message_:"Fn arrows choose  Enter load  Esc back");
+        style::footer(c,pending_?message_:"Arrows choose  Enter load  Esc back");
     }else if(sequencer_){
         const auto& p=p_.samplePatterns[pattern_];const unsigned step=(tick%patternTicks(p.steps.length,p.steps.grid))/gridTicks(p.steps.grid);
         for(int pad=0;pad<8;++pad){int y=31+pad*10;bool selected=pad==pad_;

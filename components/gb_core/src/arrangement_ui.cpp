@@ -147,7 +147,7 @@ void ArrangementUi::draw(Canvas& c,uint8_t screen,bool playing) const {
                 c.text(x+8,y+2,text,pat<0?color::Muted:style::tracks[t]);
             }
         }
-        style::footer(c,"Fn arrows/pat +/-  Enter launch  Opt");
+        style::footer(c,"Arrows/pat +/-  Enter launch  Opt");
     }else if(screen==3){
         snprintf(text,sizeof(text),"SONG / %u PARTS",p_.songLength);style::header(c,text,playing?"PLAY":"STOP",color::Playhead);
         if(p_.songLength)for(int i=0;i<p_.songLength;++i){int x=4+i*232/p_.songLength,w=std::max(1,(i+1)*232/p_.songLength-i*232/p_.songLength-1);c.fillRect(x,19,w,5,style::tracks[p_.song[i].scene%6]);if(i==entry_)c.fillRect(x,25,w,2,color::Text);}
@@ -180,7 +180,7 @@ void ArrangementUi::draw(Canvas& c,uint8_t screen,bool playing) const {
             if(i){c.text(x+7,105,"M",mute?color::Warning:color::StepOff);c.text(x+21,105,"S",solo?color::StepAccent:color::StepOff);}
             else c.text(x+5,105,"VOL",color::Muted);
         }
-        style::footer(c,"Fn arrows level  M mute S solo  Esc");
+        style::footer(c,"Arrows level  M mute S solo  Esc");
     }
 }
 }  // namespace gb

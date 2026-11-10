@@ -16,7 +16,7 @@ folders are not used. Convert MP3/AAC to WAV first.
 Source files remain unchanged. Playback material is converted to 32 kHz, 16-bit
 mono: stereo channels are averaged and resampling uses linear interpolation.
 
-Press `Fn+B`: `Fn+↑/↓` selects a file, `[` / `]` changes page, and `Enter` opens the
+Press `Fn+B`: `↑/↓` selects a file, `[` / `]` changes page, and `Enter` opens the
 waveform. `Fn+B` refreshes the directory, so newly copied files appear after reopening
 it. Processing runs in a background task while the interface stays responsive.
 
@@ -44,9 +44,9 @@ In **CUT**:
 
 | Keys | Action |
 |---|---|
-| Fn+←/→ | Move the waveform cursor; the viewport follows |
-| Shift+Fn+←/→ | Move by one audio frame |
-| Fn+↑/↓ | Zoom in/out around the cursor |
+| ←/→ | Move the waveform cursor; the viewport follows |
+| Shift+←/→ | Move by one audio frame |
+| ↑/↓ | Zoom in/out around the cursor |
 | A | Set selection start at the cursor |
 | D | Set selection end at the cursor |
 | R | Select the full source and reset zoom |
@@ -76,7 +76,8 @@ project. For confirmed deletion, use **ACTIONS → Delete sample slot** instead 
 
 `Fn+P` switches between **CUT** and **PADS** (the pad sequencer). In PADS:
 
-- `1..8` selects and auditions a pad.
+- `1..8` selects and auditions a pad; bare ↑/↓ selects a pad without audition.
+- Bare ←/→ selects a pattern.
 - `qwertyui` / `asdfghjk` toggles steps 1..16; hold `Shift` for an accent.
 - `Fn+[` / `Fn+]` selects P01..P16.
 - `Fn+−/+` assigns a slot to the selected pad.
@@ -88,7 +89,7 @@ project. For confirmed deletion, use **ACTIONS → Delete sample slot** instead 
 
 Each pattern stores its own eight pad assignments, so a song can use all 32 slots.
 Editing or explicitly selecting a pattern assigns it to SMP in the selected scene.
-In Scenes, choose SMP with `Fn+→` or `6`, then use `Fn+−/+` to assign its pattern.
+In Scenes, choose SMP with `→` or `6`, then use `Fn+−/+` to assign its pattern.
 The Mixer has a separate SMP level, mute and solo. Sample scenes fit into the normal
 [song arrangement](stage-4.md).
 

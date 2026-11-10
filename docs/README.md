@@ -17,6 +17,7 @@ at **Opt → SCREENS → Quick start**, or follow the illustrated guide below.
 | [Synth Performance](synth-performance.md) | Strings, legato, pitch trails, scales and sound presets |
 | [Synth recording and editing](stage-3.md) | Live recording, note editing, quantize and sound parameters |
 | [Arrangement and mixer](stage-4.md) | Patterns → scenes → songs, levels and arpeggiation |
+| [Audio visuals and RGB](audio-visuals.md) | FFT mixer, four animations, palettes and LED feedback |
 | [Sampler](stage-5-sampler.md) | WAV import, live microphone recording, slicing and pads |
 | [Demo songs](../examples/README.md) | Three original retrowave/synthwave projects and audio previews |
 

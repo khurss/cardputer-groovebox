@@ -23,4 +23,12 @@ captures. Each individual screen is **480×270**, a 2× rendering of the native
 | [projects.png](projects.png) | Save, create, copy and demo actions |
 | [quick-start.png](quick-start.png) | First page of the built-in tutorial |
 
+Additional audio views: [gallery](audio-visuals.png), [FFT mixer](mixer-fft.png),
+[spectrum](visual-spectrum.png), [waveform](visual-wave.png),
+[waterfall](visual-waterfall.png), [orbit](visual-orbit.png) and
+[settings](visual-settings.png). Their audio comes from the demo engine at 5%.
+
+Regenerate all screenshots with `make render-interface` after a firmware build has
+provided the M5GFX font. The renderer uses only Python's standard library.
+
 [Back to documentation](../README.md)

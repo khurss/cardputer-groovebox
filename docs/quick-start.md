@@ -1,7 +1,7 @@
 # Quick start: make your first track
 
 The same walkthrough is available on the device at **Opt → SCREENS → Quick start**.
-Press `Enter` or `Tab` for the next page, `Fn+←` for the previous page, and `Esc` or
+Press `Enter` or `Tab` for the next page, `←` for the previous page, and `Esc` or
 `Opt` to close it. [Keyboard reference](controls.md) · [All guides](README.md)
 
 ![Welcome page of the built-in quick start tutorial](images/quick-start.png)
@@ -26,7 +26,8 @@ use `Shift` with a step key for an accent.
 
 ## 3. Add a melody
 
-Press `Fn+2`, then **Opt → ACTIONS → Performance**. The keyboard rows now play as
+Press `Fn+2` for the default Performance view. To initialize the string layout,
+choose **Opt → ACTIONS → Performance**. The keyboard rows now play as
 four strings. Hold `Z` and press `X`: the pitch slides upward. Release `X` to return
 to `Z`. Play across rows for a chord.
 
@@ -37,7 +38,7 @@ In **SETTINGS**, choose **Sound preset**, **Keyboard layout**, **Root note** and
 
 With the loop playing, press `Alt`, play your part, then press `Alt` again to finish
 recording. Open **ACTIONS → Piano roll**: notes appear immediately and the visible
-pitch range follows your part. `Fn+arrows` moves the cursor, `Enter` adds or selects
+pitch range follows your part. `arrows` moves the cursor, `Enter` adds or selects
 a note, and `Backspace` deletes a selected note. **Undo** reverses the last recording
 pass as a single action.
 
@@ -84,3 +85,10 @@ places it on steps. See the [sampler guide](stage-5-sampler.md) for chopping and
 
 To explore a finished arrangement, install an [original demo song](../examples/README.md)
 from **Projects → Add demo songs**, load it, then press `Fn+4` and `Enter`.
+
+## 8. Add visuals and RGB feedback
+
+Press `Fn+7` for the FFT mixer, or `Fn+8` for four audio-reactive visualizations.
+Use bare left/right to change visual mode and up/down for sensitivity. P changes
+colors. Opt → SETTINGS includes smoothing, motion and RGB brightness; 0% turns the
+LED off. [Visuals and RGB guide](audio-visuals.md)

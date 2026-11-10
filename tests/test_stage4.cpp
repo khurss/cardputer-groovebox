@@ -272,6 +272,7 @@ TEST(allArrangementPagesAndHeldNotesStayInsideScreen) {
     }
     s.key('2', true);
     s.key('=', true);
+    s.app.instrument().showPianoRoll();
     s.app.onKey('z', true);
     Screen canvas;
     s.app.draw(canvas, 0, false, true);
@@ -294,6 +295,7 @@ TEST(pianoRollFitsWidelySeparatedNotesWithoutScrolling) {
     p.noteCount = 2;
     p.notes[0] = {0, 24, 24, 100};
     p.notes[1] = {48, 24, 108, 100};
+    s.app.instrument().showPianoRoll();
     Notes fit;
     s.app.draw(fit, 0, false, true);
     CHECK_EQ(fit.visible, 2);

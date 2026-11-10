@@ -40,6 +40,7 @@ the menu from a main workspace. [Follow the full first-track guide →](docs/qui
 | **Sampler** | Import WAV from microSD or record the microphone; select and chop waveforms into 32 sample slots for eight sequencer pads |
 | **Scenes and Song** | Combine six tracks into 16 scenes and arrange up to 64 song entries with repeats |
 | **Mixer** | Set master and six track levels, with per-track mute and solo |
+| **Audio visuals and RGB** | Master FFT mixer, spectrum/wave/waterfall/orbit modes, four palettes and audio-reactive LED |
 | **Projects** | Create named `.gbp` files, autosave, keep a backup, save copies and reopen your last project |
 
 ![Cardputer sampler waveform editor, pad sequencer, scenes, WAV browser, menu and project manager](docs/images/sampler-projects.png)
@@ -49,6 +50,17 @@ while samples play. The sampler provides four playback voices and roughly
 65 seconds of total decoded sample storage. Each synth pattern holds up to
 64 notes. Projects are saved as GBP v5 and can be loaded from v1–v5; WAV audio is
 referenced separately, so transfer the `samples` folder with your projects.
+
+## Audio-reactive visuals
+
+Press **Fn+7** for a mixer with a live FFT spectrum, or **Fn+8** for four configurable
+visualizations. Choose colors, sensitivity, smoothing and motion in SETTINGS.
+The RGB LED follows instrument and song audio, with adjustable brightness.
+
+![FFT mixer and four configurable audio-reactive visualizations](docs/images/audio-visuals.png)
+
+Bare arrows navigate editors and menus; Performance preserves their musical keys.
+The synth opens in Performance by default. [Visuals, controls and RGB details →](docs/audio-visuals.md)
 
 ## Retrowave and synthwave demo songs
 
@@ -68,6 +80,7 @@ volume**. [Listen to previews and explore the arrangements →](examples/README.
 ## Documentation
 
 - [Quick start: make your first track](docs/quick-start.md)
+- [FFT mixer, visualizations and RGB LED](docs/audio-visuals.md)
 - [Menu navigation and settings](docs/menu.md)
 - [Keyboard shortcuts and layouts](docs/controls.md)
 - [Projects, saving and recovery](docs/projects.md)
@@ -113,6 +126,7 @@ The repository includes host tests, audio renderers and automated hardware check
 python3 tools/device_menu_test.py
 python3 tools/device_ux_test.py
 python3 tools/device_visual_test.py
+python3 tools/device_audio_visual_test.py
 python3 tools/device_sampler_test.py
 ```
 

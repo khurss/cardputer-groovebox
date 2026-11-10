@@ -6,7 +6,7 @@
 namespace gb {
 namespace {
 using O = MenuOp;
-constexpr const char* screens[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER"};
+constexpr const char* screens[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER", "MIX FFT", "VISUALS"};
 constexpr const char* grids[] = {"1/4", "1/8", "1/16", "1/32", "1/8T", "1/16T"};
 constexpr const char* waves[] = {"SINE", "TRIANGLE", "SAW", "SQUARE"};
 constexpr const char* arps[] = {"OFF", "UP", "DOWN", "UP/DOWN"};
@@ -19,8 +19,10 @@ constexpr MenuItem navigation[] = {
     {"Mixer", "Levels / mute / solo", O::Screen, 4},
     {"Sampler", "WAV / microphone / cuts / pads", O::Screen, 5},
     {"Projects", "New / open / save / save a copy", O::Projects},
-    {"Quick start", "First track in eight short steps", O::Help},
-    {"Key reference", "Shortcuts for the current screen", O::KeyHelp}
+    {"Quick start", "First track in nine short steps", O::Help},
+    {"Key reference", "Shortcuts for the current screen", O::KeyHelp},
+    {"Mixer FFT", "Mix levels with live output spectrum", O::Screen, 6},
+    {"Visuals", "Four audio-reactive views", O::Screen, 7}
 };
 constexpr MenuItem globals[] = {
     {"Master volume", "Overall output; Ctrl for 1% steps", O::Master},
@@ -117,13 +119,34 @@ constexpr MenuItem samplerSettings[] = {
     {"Pattern", "Pattern assigned to this scene", O::Pattern}, {"Chop count", "Number of equal slices to save", O::Parts},
     {"Pattern length", "Number of active steps", O::Length}, {"Step grid", "Retimes steps; undo available", O::Grid}
 };
+constexpr MenuItem visualActions[] = {
+    {"Play / stop", "Space also controls playback", O::Play},
+    {"Next visual", "Spectrum / wave / waterfall / orbit", O::VisualParameter, 0},
+    {"Next palette", "Four multicolor palettes", O::VisualParameter, 1}
+};
+constexpr MenuItem visualSettings[] = {
+    {"Visualization", "Left/right also changes the view", O::VisualParameter, 0},
+    {"Palette", "Neon / Sunset / Ocean / Rainbow", O::VisualParameter, 1},
+    {"Sensitivity", "Display gain only; audio unchanged", O::VisualParameter, 2},
+    {"Smoothing", "Spectrum release: fast to slow", O::VisualParameter, 3},
+    {"Motion speed", "Waterfall scroll / orbit rotation", O::VisualParameter, 4}
+};
+constexpr MenuItem fftSettings[] = {
+    {"Channel", "Left/right selects a mixer strip", O::Strip},
+    {"Channel level", "Up/down adjusts; Shift: fine", O::Level},
+    {"Mute channel", "Mute selected channel", O::Mute},
+    {"Solo channel", "Solo selected channel", O::Solo},
+    {"Palette", "Color palette for spectrum and LED", O::VisualParameter, 1},
+    {"Sensitivity", "Display gain only; audio unchanged", O::VisualParameter, 2},
+    {"Smoothing", "Spectrum release: fast to slow", O::VisualParameter, 3}
+};
 template<size_t N> constexpr unsigned count(const MenuItem (&)[N]) { return N; }
 unsigned contextCount(uint8_t page, uint8_t screen) {
     if (page == 1) {
-        const unsigned sizes[] = {count(drumActions), count(synthActions), count(sceneActions), count(songActions), count(mixerActions), count(samplerActions)};
+        const unsigned sizes[] = {count(drumActions), count(synthActions), count(sceneActions), count(songActions), count(mixerActions), count(samplerActions), count(mixerActions), count(visualActions)};
         return sizes[screen];
     }
-    const unsigned sizes[] = {count(drumSettings), count(synthSettings), count(sceneSettings), count(songSettings), count(mixerSettings), count(samplerSettings)};
+    const unsigned sizes[] = {count(drumSettings), count(synthSettings), count(sceneSettings), count(songSettings), count(mixerSettings), count(samplerSettings), count(fftSettings), count(visualSettings)};
     return sizes[screen];
 }
 int bounded(int n, int low, int high) { return std::max(low, std::min(n, high)); }
@@ -136,19 +159,20 @@ int cycle(int value, int direction, const uint8_t* values, unsigned n) {
     return values[(at + n + direction) % n];
 }
 }
-unsigned AppUi::menuCount(uint8_t page) const { return page == 0 ? count(navigation) : contextCount(page, screen_) + (page == 2 ? count(globals) : 0); }
+unsigned AppUi::menuCount(uint8_t page) const { return page == 0 ? count(navigation) : contextCount(page, screen_) + (page == 2 ? count(globals) + 1 : 0); }
 MenuItem AppUi::menuItem(uint8_t page, unsigned row) const {
     if (page == 0) return navigation[row];
+    if (page == 2 && row == menuCount(page)-1) return {"RGB brightness", "0: off; on requires full backlight", O::VisualParameter, 5};
     if (page == 2 && row < count(globals)) return globals[row];
     if (page == 2) row -= count(globals);
-    const MenuItem* actions[] = {drumActions, synthActions, sceneActions, songActions, mixerActions, samplerActions};
-    const MenuItem* settings[] = {drumSettings, synthSettings, sceneSettings, songSettings, mixerSettings, samplerSettings};
+    const MenuItem* actions[] = {drumActions, synthActions, sceneActions, songActions, mixerActions, samplerActions, mixerActions, visualActions};
+    const MenuItem* settings[] = {drumSettings, synthSettings, sceneSettings, songSettings, mixerSettings, samplerSettings, fftSettings, visualSettings};
     return (page == 1 ? actions : settings)[screen_][row];
 }
 void AppUi::toggleMenu() {
     menuOpen_ = !menuOpen_; menuEditing_ = menuConfirm_ = false; dirty_ = true;
     menuNotice_ = nullptr;
-    if (menuOpen_) menuRow_[0] = screen_;
+    if (menuOpen_) menuRow_[0] = screen_ < 6 ? screen_ : screen_ + 3;
 }
 void AppUi::shortcut(char code) {
     if (screen_ == 0) drums_.shortcut(code);
@@ -157,7 +181,7 @@ void AppUi::shortcut(char code) {
         if (code == 'z') sampler_.undoPattern();
         else sampler_.onKey(code, true, shift_);
     }
-    else arrangement_.onKey(screen_, code, true, shift_);
+    else arrangement_.onKey(screen_ == 6 ? 4 : screen_, code, true, shift_);
 }
 void AppUi::menuApply(Command c) {
     if (sink_(context_, c)) { applyEdit(project_, c); ++menuEdits_; }
@@ -165,7 +189,7 @@ void AppUi::menuApply(Command c) {
 }
 const char* AppUi::menuDisabled(const MenuItem& item) const {
     const auto op = item.op;
-    if (op == O::Help || op == O::KeyHelp || op == O::Projects || op == O::Screen || op == O::Master || op == O::Tempo || op == O::Swing) return nullptr;
+    if (op == O::VisualParameter || op == O::Help || op == O::KeyHelp || op == O::Projects || op == O::Screen || op == O::Master || op == O::Tempo || op == O::Swing) return nullptr;
     if (sampler_.storageBusy()) return "Preparing samples; please wait";
     if (screen_ == 3 && op == O::Play && arrangement_.songEntry() >= project_.songLength) return "Insert a scene into this row first";
     if (screen_ == 3 && op == O::Shortcut && item.argument == key::Enter && project_.songLength == kSongEntries) return "Song is full (64 entries)";
@@ -204,7 +228,7 @@ void AppUi::menuKey(char code) {
         else menuOpen_ = false;
         return;
     }
-    if (code >= '1' && code <= '6' && (fn_ || (!menuEditing_ && menuPage_ == 0))) {
+    if (code >= '1' && code <= '8' && (fn_ || (!menuEditing_ && menuPage_ == 0))) {
         menuOpen_ = menuEditing_ = false;
         selectScreen(code - '1'); menuRow_[1] = menuRow_[2] = 0; return;
     }
@@ -231,11 +255,12 @@ void AppUi::menuKey(char code) {
 }
 void AppUi::menuRun(const MenuItem& item) {
     switch (item.op) {
+        case O::VisualParameter: visual_.adjust(item.argument, 1); break;
         case O::Performance:
             instrument_.showPerformance(); menuOpen_ = false; break;
         case O::PianoRoll: instrument_.showPianoRoll(); menuOpen_ = false; break;
         case O::Projects: projectsOpen_ = true; menuOpen_ = false; projectRow_ = 0; projectRequest_ = ProjectAction::Refresh; break;
-        case O::Help: case O::KeyHelp: helpOpen_ = true; menuOpen_ = false; helpPage_ = item.op == O::Help ? 0 : 8; break;
+        case O::Help: case O::KeyHelp: helpOpen_ = true; menuOpen_ = false; helpPage_ = item.op == O::Help ? 0 : kTutorialPages; break;
         case O::Screen:
             selectScreen(item.argument); menuRow_[1] = menuRow_[2] = 0; menuOpen_ = false; break;
         case O::Play:
@@ -278,6 +303,16 @@ void AppUi::menuValue(const MenuItem& item, char* value, size_t size) const {
     const auto& s = project_.synths[track];
     const DrumPattern& timing = screen_ == 5 ? project_.samplePatterns[sampler_.pattern()].steps : project_.drums[drums_.currentPattern()];
     switch (item.op) {
+        case O::VisualParameter: {
+            const auto& v = visual_.settings();
+            if (item.argument == 0) text = AudioVisual::modeName(v.mode);
+            else if (item.argument == 1) text = AudioVisual::paletteName(v.palette);
+            else if (item.argument == 2) { snprintf(value,size,"x%u",1u<<v.gain); return; }
+            else if (item.argument == 3) text = AudioVisual::smoothingName(v.smoothing);
+            else if (item.argument == 4) n = v.motion;
+            else { snprintf(value,size,"%u%%",v.led); return; }
+            break;
+        }
         case O::Screen: text = item.argument == screen_ ? "CURRENT" : "OPEN"; break;
         case O::Play: text = (screen_ != 2 && screen_ != 3 && desiredPlaying_) ? "STOP" : "PLAY"; break;
         case O::Record: text = (screen_ == 5 ? sampler_.recording() : instrument_.busy()) ? "STOP REC" : "START REC"; break;
@@ -335,6 +370,7 @@ void AppUi::menuAdjust(const MenuItem& item, int direction) {
     const uint8_t lengths[] = {4, 8, 16};
     Command c;
     switch (item.op) {
+        case O::VisualParameter: visual_.adjust(item.argument,direction); return;
         case O::Preset: instrument_.loadPreset((instrument_.preset() + 6 + direction) % 6); return;
         case O::Layout: instrument_.setKeyboard(0, direction > 0); return;
         case O::Root: instrument_.setKeyboard(1, (project_.keyboardRoot[t] + 12 + direction) % 12); return;

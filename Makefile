@@ -44,3 +44,12 @@ render-demos: build/render_demos
 build/render_demos: tools/render_demos.cpp $(CORE) $(HEADERS)
 	mkdir -p build
 	$(CXX) -std=c++17 -O2 -Icomponents/gb_core/include tools/render_demos.cpp $(CORE) -o $@
+
+.PHONY: render-interface
+render-interface: build/render_interface
+	./build/render_interface > build/interface.txt
+	python3 tools/render_interface.py build/interface.txt docs/images
+
+build/render_interface: tools/render_interface.cpp $(CORE) $(HEADERS)
+	mkdir -p build
+	$(CXX) -std=c++17 -O2 -Icomponents/gb_core/include tools/render_interface.cpp $(CORE) -o $@

@@ -314,6 +314,7 @@ TEST(recordingEndsBeforeScreenAndTargetChanges) {
 }
 TEST(pianoRollFitsScreenAndShowsHiddenNotes) {
     Session s;
+    s.ui.instrument().showPianoRoll();
     s.key(key::Tab);
     auto& p = s.p.instruments[0][0];
     p.noteCount = 3;
@@ -511,7 +512,7 @@ TEST(quickStartAndProjectBrowserFitAndConsumeKeys) {
     Session s; s.key(key::Opt);
     for(int i=0;i<7;++i)s.key('.',true);
     s.key(key::Enter);CHECK_EQ(s.ui.helpOpen(),true);
-    for(int i=0;i<9;++i){MenuCanvas c;s.ui.draw(c,0,false,true);CHECK_EQ(c.valid,true);s.key(key::Enter);}
+    for(int i=0;i<10;++i){MenuCanvas c;s.ui.draw(c,0,false,true);CHECK_EQ(c.valid,true);s.key(key::Enter);}
     s.key(key::Opt);s.key(key::Opt);
     for(int i=0;i<6;++i)s.key('.',true);
     s.key(key::Enter);CHECK_EQ(s.ui.projectsOpen(),true);

@@ -1,6 +1,7 @@
 # Synth Performance: strings, legato and sound presets
 
-Press `Fn+2` to open the synth. **Opt → ACTIONS** offers three views:
+Press `Fn+2` to open the synth in **Performance** by default. Startup preserves
+the saved sound and keyboard layout. **Opt → ACTIONS** offers three views:
 
 - **Performance**: smooth colored pitch trails, a small 4×10 key map, root/scale,
   glide and recording status. `Esc` returns to the piano roll.
@@ -9,7 +10,7 @@ Press `Fn+2` to open the synth. **Opt → ACTIONS** offers three views:
 
 ![Synth Performance showing pitch trails and pressed-key minimap](images/performance.png)
 
-The first switch to Performance from the piano layout enables **Strings** and
+Explicitly choosing ACTIONS → Performance from the piano layout enables **Strings** and
 **Minor**; if glide was zero, it loads **Warm slide**. Subsequent view changes retain
 the sound. Choose **SETTINGS → Keyboard layout → PIANO** to return to piano keys.
 [All guides](README.md) · [Keyboard controls](controls.md)
@@ -54,8 +55,8 @@ may make the sound differ from that preset; the project stores the actual parame
 
 ![Sound editor showing a three-by-three grid of synth parameters](images/sound-editor.png)
 
-For manual adjustment, open **Sound editor** or press `Fn+S`. `Fn+←/→` selects a
-card; `Fn+↑/↓` changes its value. The same parameters appear as a list in SETTINGS,
+For manual adjustment, open **Sound editor** or press `Fn+S`. `←/→` selects a
+card; `↑/↓` changes its value. The same parameters appear as a list in SETTINGS,
 where `Ctrl` gives a fine step. Waveforms are sine, triangle, saw and square.
 
 ## Record and edit a performance

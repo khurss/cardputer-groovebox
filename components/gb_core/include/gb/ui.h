@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include "gb/arrangement_ui.h"
+#include "gb/audio_visual.h"
 #include "gb/drum_ui.h"
 #include "gb/instrument_ui.h"
 #include "gb/sampler_ui.h"
@@ -11,6 +12,9 @@ class AppUi {
 public:
     AppUi(Project& project, CommandSink sink, void* context);
     void onKey(char code, bool pressed);
+    AudioVisual& visual() { return visual_; }
+    const AudioVisual& visual() const { return visual_; }
+    void audioFrame(const AudioFrame& frame) { visual_.process(frame); if (screen_ >= 6) dirty_ = true; }
     void setPlayback(bool playing);
     void receive(const RecordUpdate& update);
     void setPosition(uint32_t tick);
@@ -50,6 +54,7 @@ public:
     const InstrumentUi& instrument() const { return instrument_; }
 
 private:
+    static constexpr uint8_t kTutorialPages = 9;
     void helpKey(char code);
     void drawHelp(Canvas& canvas) const;
     void projectsKey(char code);
@@ -81,6 +86,7 @@ private:
     InstrumentUi instrument_;
     ArrangementUi arrangement_;
     SamplerUi sampler_;
+    AudioVisual visual_;
     uint32_t status_ = 0;
     uint32_t fnPressedMs_ = 0, menuEdits_ = 0;
     bool fnUsed_ = false, menuOpen_ = false, menuEditing_ = false, menuConfirm_ = false;

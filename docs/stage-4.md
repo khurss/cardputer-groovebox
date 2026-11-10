@@ -1,7 +1,8 @@
 # Scenes, song arrangement, mixer and arpeggiator
 
 Build reusable patterns, combine them into scenes, then arrange scenes into a song.
-`Fn+1..6` opens Drums, Synth, Scenes, Song, Mixer or Sampler; `Tab` cycles them.
+`Fn+1..6` opens Drums, Synth, Scenes, Song, Mixer or Sampler. `Fn+7` opens Mixer FFT and
+`Fn+8` opens Visuals; `Tab` cycles all eight.
 `Space` starts/stops playback. In Song, playback starts from the selected entry.
 [Menu guide](menu.md) · [All guides](README.md)
 
@@ -37,7 +38,7 @@ Create your blocks first: `[` / `]` selects one of 16 drum patterns. In Synth,
 ![Scenes with six track columns and assigned pattern numbers](images/scenes.png)
 
 1. Open `Fn+3`. Each row is a scene; columns are DRUM, T1..T4 and SMP.
-2. `Fn+↑/↓` or `[` / `]` selects a scene; `Fn+←/→` selects a track. `1..6` also
+2. `↑/↓` or `[` / `]` selects a scene; `←/→` selects a track. `1..6` also
    selects the track column.
 3. `Fn+−/+` chooses a pattern; `--` means no pattern on that track. `Fn+Backspace`
    clears the cell.
@@ -46,7 +47,7 @@ Create your blocks first: `[` / `]` selects one of 16 drum patterns. In Synth,
    boundary: `+` marks the queued scene and `>` marks the playing scene.
 6. Select a scene and open `Fn+4`. `Fn+Enter` inserts it before the selected song
    entry. Move down to **+ ADD** to append at the end.
-7. `Fn+↑/↓` selects an entry; `Fn+←/→` selects SCENE/REPEAT; `Fn+−/+` changes the
+7. `↑/↓` selects an entry; `←/→` selects SCENE/REPEAT; `Fn+−/+` changes the
    value. `Fn+Backspace` deletes the entry; `Fn+Z` undoes the edit.
 8. `Enter` or `Space` plays from the selected entry. Playback stops after the last
    entry; the next `Space` starts again from the selection.
@@ -79,11 +80,13 @@ and live playing share five voices, or four while samples sound.
 
 ![Mixer with MAIN, DRUM, four synth tracks and SMP](images/mixer.png)
 
-`Fn+5` opens MAIN, DRUM, T1..T4 and SMP. `Fn+←/→` selects a strip; `Fn+↑/↓` or
+`Fn+5` opens MAIN, DRUM, T1..T4 and SMP. `←/→` selects a strip; `↑/↓` or
 `Fn+−/+` changes level by five percentage points, or one with `Shift`. `M` toggles
 track mute and `S` toggles solo; mute takes priority. MAIN has no mute/solo.
 `Fn+Z` undoes the last edit. MAIN controls the full output after the limiter.
 The faders show **configured levels**, not VU measurements.
+For a real master spectrum above the mixer controls, open [Mixer FFT](audio-visuals.md)
+with `Fn+7`.
 
 Scenes, song entries, levels, mute/solo and arpeggiator settings save to SD.
 The current firmware reads GBP v1–v5 and writes v5. Tests use a separate file and

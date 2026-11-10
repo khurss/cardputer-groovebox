@@ -32,12 +32,12 @@ recording or explicitly selecting a pattern assigns it.
 
 | Keys | Action |
 |---|---|
-| Fn+arrows | Move the cursor, or change the selected note's start/pitch |
+| Arrows | Move the cursor, or change the selected note's start/pitch |
 | Enter | Select the note under the cursor or add one; repeated presses cycle overlapping notes |
 | Fn+Enter / Esc | Deselect the note |
 | Backspace | Delete the selected note |
-| Shift+Fn+←/→ | Change length |
-| Shift+Fn+↑/↓ | Change velocity |
+| Shift+←/→ | Change length |
+| Shift+↑/↓ | Change velocity |
 | Fn+C / Fn+V | Copy / paste the pattern |
 | Fn+Z | Undo the last action |
 | Fn+Backspace | Clear all notes in the current pattern |
@@ -47,7 +47,8 @@ recording or explicitly selecting a pattern assigns it.
 | Fn+Q | Toggle recording quantize |
 | Fn+F | Switch fit / semitone pitch zoom |
 
-The physical arrows are `Fn+,` left, `Fn+/` right, `Fn+;` up and `Fn+.` down.
+In Piano roll and Sound editor, the physical arrows are `,` left, `/` right,
+`;` up and `.` down, with no Fn needed. Performance preserves their note mappings.
 Changing grid does not move existing notes. Notes beyond a shortened pattern's end
 remain in the project; **HIDDEN** indicates their presence.
 
@@ -63,8 +64,8 @@ works. Editing the target synth pattern is temporarily disabled during recording
 
 ![Sound editor with waveform, envelope, filter, glide and level](images/sound-editor.png)
 
-`Fn+S` switches between sound parameters and the piano roll. `Fn+←/→` selects a
-field; `Fn+↑/↓` changes it. Available controls are sine/triangle/saw/square, ADSR,
+`Fn+S` switches between sound parameters and the piano roll. `←/→` selects a
+field; `↑/↓` changes it. Available controls are sine/triangle/saw/square, ADSR,
 low-pass cutoff, resonance, glide and level. Parameter edits do not reset the phase
 of sounding notes.
 

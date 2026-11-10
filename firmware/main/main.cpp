@@ -15,6 +15,8 @@
 #include "esp_cpu.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -36,6 +38,10 @@ constexpr uint32_t kFrameMs = 50;
 constexpr int64_t kIdleSaveMs = 3000;
 gb::Project audioProject, uiProject;
 gb::SpscQueue<gb::Command, 32> commands;
+gb::AudioTap audioTap;
+uint32_t fftMaxUs = 0, rgbOutput = 0, rgbFailures = 0;
+bool rgbReady = false;
+nvs_handle_t visualNvs = 0;
 uint8_t fileBuffer[gb::kProjectBufferSize];
 int16_t outputBlock[hw::kBlockFrames * 2], inputBlock[hw::kBlockFrames * 2];
 std::atomic<int> micPeak{0};
@@ -55,6 +61,19 @@ FILE* upload = nullptr;
 bool uploadIsWav = false;
 char wavUploadPath[112] = {}, wavFinalPath[112] = {};
 size_t uploadExpected = 0, uploadWritten = 0;
+void loadVisualSettings(gb::AppUi& ui) {
+    // Never erase the shared NVS partition, including on initialization errors.
+    if (testMode) return;
+    if (nvs_flash_init() != ESP_OK || nvs_open("gb-visual", NVS_READWRITE, &visualNvs) != ESP_OK) {
+        visualNvs = 0; printf("VIS settings persistence unavailable\n"); return;
+    }
+    uint8_t bytes[7]; size_t size=sizeof(bytes);
+    if (nvs_get_blob(visualNvs,"settings",bytes,&size)==ESP_OK && size==sizeof(bytes) && bytes[0]==1) {
+        gb::VisualSettings v{bytes[1],bytes[2],bytes[3],bytes[4],bytes[5],bytes[6]};
+        ui.visual().setSettings(v);
+    }
+}
+
 bool sendCommand(void*, const gb::Command& c) {
     xSemaphoreTake(commandMutex, portMAX_DELAY);
     while (!commands.push(c)) vTaskDelay(pdMS_TO_TICKS(1));
@@ -69,6 +88,7 @@ void audioTask(void*) {
         // One full queue per block is bounded even if the producer keeps filling it.
         for (int i = 0; i < 32 && commands.pop(c); ++i) engine->handle(c);
         engine->render(outputBlock, hw::kBlockFrames);
+        audioTap.capture(outputBlock, hw::kBlockFrames);
         const uint32_t cycles = esp_cpu_get_cycle_count() - start;
         const uint32_t load = static_cast<uint32_t>(uint64_t{cycles} * 1000 / available);
         if (load > loadPermille.load(std::memory_order_relaxed)) loadPermille.store(load, std::memory_order_relaxed);
@@ -203,6 +223,11 @@ void runConsoleLine(gb::AppUi& ui, char* line) {
             printf("OK\n");
         } else
             printf("ERR key\n");
+    } else if (strcmp(line, "B") == 0) {
+        const auto& v=ui.visual(); const auto& settings=v.settings();
+        printf("VIS mode=%u palette=%u gain=%u smoothing=%u motion=%u led=%u frames=%u peak=%u bin=%u fft_max_us=%u rgb=%u rgb_ready=%u rgb_failures=%u performance=%u\n",
+            settings.mode,settings.palette,settings.gain,settings.smoothing,settings.motion,settings.led,
+            v.updates(),v.peak(),v.dominantBin(),unsigned(fftMaxUs),unsigned(rgbOutput),rgbReady,unsigned(rgbFailures),ui.instrument().performanceVisible());
     } else if (line[0] == 'S')
         printState(ui);
     else if (line[0] == 'I')
@@ -447,11 +472,20 @@ void uiTask(void*) {
         ui.setWarning("LOAD ERR");
     else if (loadedBackup)
         ui.setWarning("BACKUP");
+    loadVisualSettings(ui);
+    display.setBrightness(255);
+    rgbReady = hw::initRgb();
+    display.setBrightness(ui.visual().settings().led ? 255 : 120);
+    if (!rgbReady) printf("ERROR rgb initialization\n");
     if (!hw::initKeyboard()) printf("ERROR keyboard\n");
     printf("READY\n");
     int64_t nextFrame = 0, lastEditMs = 0;
     uint32_t savedEdits = ui.editCount(), seenEdits = savedEdits;
     bool lastPlaying = false, savePending = false;
+    int64_t nextAnalysis = 0, visualEditMs = 0, lastAudioMs = 0;
+    uint32_t visualSeen = 0, visualSaved = 0;
+    uint8_t lastLed = ui.visual().settings().led;
+    audioTap.request();
     while (true) {
         static gb::SampleResult sampleResult;
         while (samplerStorage.poll(sampleResult)) ui.sampler().receive(sampleResult);
@@ -476,6 +510,34 @@ void uiTask(void*) {
         while (engine->popRecordUpdate(update)) ui.receive(update);
         const int64_t now = esp_timer_get_time() / 1000;
         const bool playing = engine->playing();
+        if (now >= nextAnalysis) {
+            nextAnalysis = now + kFrameMs;
+            static gb::AudioFrame visualFrame;
+            if (audioTap.pop(visualFrame)) {
+                const int64_t start = esp_timer_get_time();
+                ui.audioFrame(visualFrame);
+                fftMaxUs = std::max(fftMaxUs, uint32_t(esp_timer_get_time()-start));
+                lastAudioMs = now;
+            }
+            audioTap.request();
+            const auto led = ui.visual().settings().led;
+            if (lastLed != led) {
+                // Send black while power is still stable, then restore dim backlight.
+                if (!led && rgbReady) { if (hw::setRgb(0)) rgbOutput = 0; else ++rgbFailures; }
+                display.setBrightness(led ? 255 : 120); lastLed = led;
+            }
+            const uint32_t rgb = now-lastAudioMs > 250 ? 0 : ui.visual().ledRgb();
+            if (rgbReady && led) {
+                if (hw::setRgb(rgb)) rgbOutput = rgb; else ++rgbFailures;
+            }
+        }
+        if (visualSeen != ui.visual().revisions()) { visualSeen = ui.visual().revisions(); visualEditMs = now; }
+        if (visualNvs && !testMode && visualSaved != visualSeen && !playing && !engine->activeVoices() && !engine->sampleVoices() && !ui.busy() && now-visualEditMs >= kIdleSaveMs) {
+            const auto& v = ui.visual().settings();
+            uint8_t bytes[]={1,v.mode,v.palette,v.gain,v.smoothing,v.motion,v.led};
+            if (nvs_set_blob(visualNvs,"settings",bytes,sizeof(bytes))==ESP_OK && nvs_commit(visualNvs)==ESP_OK) visualSaved=visualSeen;
+            else { visualEditMs=now; printf("VIS settings save failed\n"); }
+        }
         ui.setPlayback(playing);
         if (ui.editCount() != seenEdits) {
             seenEdits = ui.editCount();

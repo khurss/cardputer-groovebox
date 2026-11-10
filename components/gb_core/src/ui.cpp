@@ -11,7 +11,7 @@ AppUi::AppUi(Project& p, CommandSink sink, void* context)
       drums_(p, sink, context),
       instrument_(p, sink, context),
       arrangement_(p, sink, context),
-      sampler_(p, sink, context) {}
+      sampler_(p, sink, context) { instrument_.showPerformance(false); }
 void AppUi::setPlayback(bool playing) {
     if (observedPlaying_ && !playing) saveRequested_ = true;
     observedPlaying_ = playing;
@@ -19,7 +19,7 @@ void AppUi::setPlayback(bool playing) {
     if (!transportPending_) desiredPlaying_ = playing;
 }
 void AppUi::selectScreen(uint8_t screen) {
-    if (screen == screen_) return;
+    if (screen >= 8 || screen == screen_) return;
     if (!instrument_.prepareExit()) {
         pendingScreen_ = screen;
         return;
@@ -81,10 +81,10 @@ void AppUi::onKey(char code, bool pressed) {
     if (code == key::Opt) { toggleMenu(); return; }
     if (menuOpen_ && code != ' ') { menuKey(code); return; }
     if (code == key::Tab) {
-        selectScreen((screen_ + 1) % 6);
+        selectScreen((screen_ + 1) % 8);
         return;
     }
-    if (fn_ && (code >= '1' && code <= '6')) {
+    if (fn_ && (code >= '1' && code <= '8')) {
         selectScreen(code - '1');
         return;
     }
@@ -112,6 +112,29 @@ void AppUi::onKey(char code, bool pressed) {
         }
         return;
     }
+    const bool arrow = code == ',' || code == '/' || code == ';' || code == '.';
+    if (!fn_ && arrow) {
+        if (screen_ == 0) { drums_.navigate(code); return; }
+        if (screen_ == 1 && !instrument_.performanceVisible()) { instrument_.onKey(code, true, true, shift_); return; }
+        if (screen_ >= 2 && screen_ <= 4) { arrangement_.onKey(screen_, code, true, shift_); return; }
+        if (screen_ == 5) {
+            if (sampler_.sequencerMode()) {
+                if (code == ';' || code == '.') sampler_.selectPad(std::clamp(int(sampler_.pad())+(code=='.'?1:-1),0,7));
+                else sampler_.onKey(code=='/'?']':'[',true,shift_);
+            } else sampler_.onKey(code,true,shift_);
+            return;
+        }
+    }
+    if (screen_ == 6) { arrangement_.onKey(4,code,fn_ || arrow,shift_); return; }
+    if (screen_ == 7) {
+        if (code == ',' || code == '/' || code == key::Enter) visual_.adjust(0,code==','?-1:1);
+        else if (code == ';' || code == '.') visual_.adjust(2,code==';'?1:-1);
+        else if (code == 'p') visual_.adjust(1,1);
+        return;
+    }
+    if (screen_ == 0 && !fn_ && shift_ && code == 'm') {
+        drums_.onKey(',',true); drums_.onKey(',',false); return;
+    }
     if (screen_ == 0)
         drums_.onKey(code, true);
     else if (screen_ == 1)
@@ -123,7 +146,7 @@ void AppUi::onKey(char code, bool pressed) {
 }
 void AppUi::toggleTransport() {
     if (sampler_.storageBusy()) return;
-    if (!desiredPlaying_) launch(screen_ == 3);
+    if (!desiredPlaying_) launch(screen_ == 3 || (screen_ >= 6 && (status_ & (1u << 9))));
     else {
         desiredPlaying_ = false; transportPending_ = true;
         Command c; c.type = CommandType::Stop; sink_(context_, c); saveRequested_ = true;
@@ -198,7 +221,7 @@ void AppUi::setWarning(const char* warning) {
 }
 void AppUi::setTime(uint32_t milliseconds) {
     nowMs_ = milliseconds;
-    instrument_.setVisualTime(milliseconds, observedPlaying_);
+    if (screen_ == 1) instrument_.setVisualTime(milliseconds, observedPlaying_);
     if (volumeVisible_ && static_cast<int32_t>(nowMs_ - volumeUntilMs_) >= 0) {
         volumeVisible_ = false;
         dirty_ = true;
@@ -232,7 +255,9 @@ void AppUi::draw(Canvas& c, uint32_t tick, bool playing, bool storage) const {
         longest = std::max(longest, patternTicks(p.length, p.grid));
     }
     const uint32_t local = tick % (longest ? longest : kTicksPerBar);
-    if (screen_ == 0)
+    if (screen_ == 6) visual_.drawMixer(c, project_, arrangement_.mixerStrip(), playing);
+    else if (screen_ == 7) visual_.draw(c, playing);
+    else if (screen_ == 0)
         drums_.draw(c, local, playing, storage);
     else if (screen_ == 1)
         instrument_.draw(c, local, playing, storage, warning_);
@@ -264,16 +289,25 @@ void AppUi::draw(Canvas& c, uint32_t tick, bool playing, bool storage) const {
     }
 }
 void AppUi::drawFnMenu(Canvas& c) const {
-    constexpr const char* names[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER"};
+    constexpr const char* names[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER", "MIX FFT", "VISUALS"};
     c.fillRect(0, 0, 240, 135, color::StepOutside);
     c.fillRect(0, 0, 240, 14, color::LaneSelected);
     char line[64];
-    snprintf(line, sizeof(line), "FN HELP %s %u%% SYN%u OPT:MENU", names[screen_], project_.masterVolume, voiceBudget_);
+    snprintf(line, sizeof(line), "KEYS %s %u%% SYN%u OPT:MENU", names[screen_], project_.masterVolume, voiceBudget_);
     c.text(3, 3, line, color::Text);
     c.text(3, 19, "1:DRUM 2:SYN 3:SCN 4:SONG 5:MIX 6:SMP", color::StepAccent);
     c.fillRect(3, 29, 234, 1, color::LaneSelected);
     // All actions above the bottom hint use the Fn key already being held.
     const auto row = [&](int index, const char* value) { c.text(3, 34 + index * 10, value, color::Text); };
+    if (screen_ >= 6) {
+        row(0, "Fn+7 mixer FFT  Fn+8 visuals");
+        row(1, "Arrows work without Fn");
+        row(2, "Visuals: L/R mode, U/D sensitivity");
+        row(3, "P palette; Opt settings / RGB LED");
+        row(5, "Space play/stop; +/- master");
+        row(7, "FFT reads real output, 63Hz-16kHz");
+        return;
+    }
     if (screen_ == 5) {
         snprintf(line, sizeof(line), "PAD %u -> S%02u  P%02u", sampler_.pad() + 1, sampler_.slot() + 1, sampler_.pattern() + 1);
         row(0, line); sampler_.drawFnMenu(c); return;
