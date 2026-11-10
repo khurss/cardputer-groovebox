@@ -41,6 +41,8 @@ public:
     virtual void text(int x, int y, const char* value, uint16_t color) = 0;
 };
 
+// The sink must accept every command: the interface applies edits to its own copy first,
+// so a dropped command would leave the interface and audio copies of the project different.
 using CommandSink = bool (*)(void* context, const Command& command);
 
 // The drum screen: turns keys into commands and draws the grid.

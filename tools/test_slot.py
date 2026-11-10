@@ -162,5 +162,35 @@ class ArgumentTests(unittest.TestCase):
         slot.validate_args(["slot.py", "remove-probe"])
 
 
+class AppSlotTests(unittest.TestCase):
+    def test_add_app_uses_its_slot(self):
+        entries = slot.add_app(DEVICE)
+        fields = struct.unpack("<HBBII16sI", entries[-1])
+        self.assertEqual(fields[1:5], (0, 0x11, 0x260000, 0x180000))
+        self.assertEqual(slot.label(entries[-1]), "groovebox")
+
+    def test_add_app_is_idempotent(self):
+        self.assertEqual(slot.add_app(slot.add_app(DEVICE)), slot.add_app(DEVICE))
+
+    def test_add_app_rejects_overlap(self):
+        taken = DEVICE + [entry(1, 0x82, 0x300000, 0x1000, "other")]
+        with self.assertRaises(ValueError):
+            slot.add_app(taken)
+
+    def test_remove_app_restores_table(self):
+        self.assertEqual(slot.remove_app(slot.add_app(DEVICE)), DEVICE)
+
+    def test_install_app_arguments_are_checked(self):
+        with tempfile.NamedTemporaryFile() as image:
+            image.write(b"\xe9rest")
+            image.flush()
+            slot.validate_args(["slot.py", "install-app", image.name])
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "install-app"])
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "install-app", "/nonexistent/path"])
+        slot.validate_args(["slot.py", "remove-app"])
+
+
 if __name__ == "__main__":
     unittest.main()

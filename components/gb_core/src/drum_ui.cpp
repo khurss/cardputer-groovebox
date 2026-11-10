@@ -54,7 +54,10 @@ Command command(CommandType type, uint8_t a = 0, uint8_t b = 0, uint8_t c = 0, u
 }  // namespace
 
 DrumUi::DrumUi(Project& project, CommandSink sink, void* context)
-    : project_(project), sink_(sink), context_(context) {}
+    : project_(project), sink_(sink), context_(context) {
+    const int8_t playing = project.scenes[0].pattern[0];
+    pattern_ = playing != kEmptyPattern ? playing : 0;
+}
 
 void DrumUi::send(const Command& out) {
     sink_(context_, out);

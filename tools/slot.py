@@ -15,6 +15,9 @@ PROBE_OFFSET = 0x260000
 PROBE_SIZE = 0x100000
 SAMPLES_OFFSET = 0x360000
 SAMPLES_SIZE = 0x400000
+APP_OFFSET = 0x260000
+APP_SIZE = 0x180000
+APP_LABEL = "groovebox"
 PORT = "/dev/ttyACM0"
 ROOT = Path(__file__).resolve().parent.parent
 FORMAT = "<HBBII16sI"
@@ -55,6 +58,23 @@ def label(entry):
 
 def remove_probe(entries):
     return [e for e in entries if label(e) not in ("probe", "samples")]
+
+
+def remove_app(entries):
+    return [e for e in entries if label(e) != APP_LABEL]
+
+
+def add_app(entries):
+    kept = remove_app(entries)
+    subtypes = []
+    for e in kept:
+        _, type_, subtype, offset, size, _, _ = struct.unpack(FORMAT, e)
+        if offset < APP_OFFSET + APP_SIZE and APP_OFFSET < offset + size:
+            raise ValueError(f"app slot overlaps partition {label(e)}")
+        if type_ == 0 and 0x10 <= subtype <= 0x1F:
+            subtypes.append(subtype)
+    next_subtype = max(subtypes, default=0x0F) + 1
+    return kept + [struct.pack(FORMAT, 0x50AA, 0, next_subtype, APP_OFFSET, APP_SIZE, APP_LABEL.encode(), 0)]
 
 
 def add_probe(entries):
@@ -102,7 +122,7 @@ def validate_args(argv):
     if len(argv) < 2:
         sys.exit(usage)
     command = argv[1]
-    if command in ("install", "install-with-samples"):
+    if command in ("install", "install-with-samples", "install-app"):
         if len(argv) < 3:
             sys.exit(usage)
         if not Path(argv[2]).is_file():
@@ -112,7 +132,7 @@ def validate_args(argv):
                 sys.exit(f"not an ESP app image (first byte is not 0xE9): {argv[2]}")
     if command == "select" and len(argv) < 3:
         sys.exit(usage)
-    if command not in ("install", "install-with-samples", "select", "remove-probe"):
+    if command not in ("install", "install-with-samples", "install-app", "select", "remove-probe", "remove-app"):
         sys.exit(f"unknown command {command}")
 
 
@@ -172,6 +192,17 @@ def main(argv):
         elif argv[1] == "remove-probe":
             write(work, OTADATA_OFFSET, otadata_image(ota_index(entries, "glide")))
             write(work, TABLE_OFFSET, build(remove_probe(entries)))
+        elif argv[1] == "install-app":
+            app = Path(argv[2]).read_bytes()
+            if len(app) > APP_SIZE:
+                sys.exit("app image does not fit its slot")
+            table = add_app(remove_probe(entries))
+            write(work, APP_OFFSET, app)
+            write(work, TABLE_OFFSET, build(table))
+            write(work, OTADATA_OFFSET, otadata_image(ota_index(table, APP_LABEL)))
+        elif argv[1] == "remove-app":
+            write(work, OTADATA_OFFSET, otadata_image(ota_index(entries, "glide")))
+            write(work, TABLE_OFFSET, build(remove_app(entries)))
 
 
 if __name__ == "__main__":

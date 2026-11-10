@@ -3,5 +3,6 @@ sdkconfig
 sdkconfig.old
 managed_components/
 prototypes/probe/components/fatfs/
+firmware/components/fatfs/
 .tmp/
 __pycache__/

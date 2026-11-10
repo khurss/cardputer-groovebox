@@ -288,3 +288,11 @@ TEST(dirtyFlagFollowsEdits) {
     f.tap('q');
     CHECK_EQ(f.ui.takeDirty(), true);
 }
+
+TEST(startsOnThePatternSceneZeroPlays) {
+    Project& project = fresh();
+    project.scenes[0].pattern[0] = 5;
+    Sent sent;
+    DrumUi ui(project, sink, &sent);
+    CHECK_EQ(ui.currentPattern(), 5);
+}
