@@ -48,6 +48,8 @@ private:
     float real_[kFftSize] = {}, imag_[kFftSize] = {}, window_[kFftSize] = {};
     uint8_t bands_[kSpectrumBands] = {}, history_[48][kSpectrumBands] = {};
     int16_t wave_[120] = {};
+    float waveScale_ = 32.f;
+    unsigned ledPosition_ = 0, ledPhase_ = 0, ledHold_ = 0;
     uint32_t revisions_ = 0, updates_ = 0;
     unsigned peak_ = 0, dominantBin_ = 0, historyAt_ = 0;
 };

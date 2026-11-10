@@ -33,7 +33,7 @@ bars display configured levels rather than measured channel peaks.
 | Mode | Display |
 |---|---|
 | **Spectrum** | Sixteen colored frequency bands with segmented bars |
-| **Wave** | A colored waveform with a rising-crossing trigger to reduce jitter |
+| **Wave** | An automatically scaled waveform with a rising-crossing trigger to reduce jitter |
 | **Waterfall** | Recent spectrum history, with low frequencies on the left and newest data at the top |
 | **Orbit** | Forty-eight radial strokes whose lengths follow the spectrum |
 
@@ -51,13 +51,18 @@ Open **Opt → SETTINGS**:
 |---|---|
 | Visualization | Spectrum, Wave, Waterfall, Orbit |
 | Palette | Neon, Sunset, Ocean, Rainbow; shared by visuals and RGB |
-| Sensitivity | Display gain ×1, ×2, ×4, ×8, ×16 or ×32; does not change audio volume |
-| Smoothing | Fast, Medium or Slow spectrum release |
+| Sensitivity | FFT display and LED gain ×1, ×2, ×4, ×8, ×16 or ×32; Wave scales automatically; audio volume is unchanged |
+| Smoothing | Fast, Medium or Slow spectrum release and Wave scale recovery |
 | Motion speed | 1–3; waterfall scrolling and orbit rotation |
 | RGB brightness | 0–50% in 5% steps; zero disables the LED |
 
-At low listening levels, raise **Sensitivity** to make the waveform easier to see.
-Tests and demos use 5% audio volume; visual gain remains independent.
+Wave displays **AUTO** and fits each incoming peak with 15% vertical headroom.
+A loud transient immediately reduces the display gain; the view zooms back in
+gradually as the signal fades. A fixed noise floor prevents tiny signals from
+filling the screen, and silence draws a flat line. Wave's vertical height is
+normalized, so it is not an absolute volume meter. Sensitivity still controls the
+other visualizations and LED response. Tests and demos use 5% audio volume;
+display scaling never changes the audio.
 
 These are device-wide display preferences, separate from song files. They save to
 the `gb-visual` NVS namespace after three idle seconds while playback/recording and
@@ -67,10 +72,14 @@ Isolated hardware tests use defaults and never write normal display preferences.
 ## RGB LED
 
 RGB feedback works in every workspace, including instrument playing. Color follows
-the approximate pitch class of the strongest FFT bin, while brightness follows
-output energy. Chords and percussion can change color as their dominant frequencies
-change; this is audio feedback, not exact MIDI-note identification. The selected
-palette and RGB brightness control it. At silence, the LED turns off.
+the approximate pitch class of the strongest FFT bin. When multiple strong spectral
+peaks are present, a slow palette sweep adds variety. Each hue is held for 250 ms
+at the normal analysis rate so rapid note changes are easier to distinguish.
+LED colors have their white component removed: at least one RGB channel stays off,
+including during loud, dense mixes. Brightness follows output energy, sensitivity
+and the RGB brightness limit. At silence, the LED turns off immediately on the
+next analysis frame. This is audio feedback, not exact MIDI-note identification;
+harmonics can also trigger the palette sweep.
 
 On Cardputer ADV, GPIO38 powers the RGB LED and controls the display backlight.
 While RGB is enabled, Groovebox uses full backlight for stable LED power. Setting
@@ -107,12 +116,15 @@ documentation images using the application drawing code and demo-engine PCM at 5
 ### Device measurements for this update
 
 The automated audio-visual scenario passed at 5% output: the measured FFT maximum
-was 0.84 ms and display-frame maximum about 15.6 ms. Neon Drive chorus playback
-peaked at 24.3% of the audio core with no new I2S/event overflows or exchange errors.
+was 0.92 ms and display-frame maximum about 15.6 ms. Neon Drive chorus playback
+peaked at 24.4% of the audio core with no new I2S/event overflows or exchange errors.
 RGB transmissions completed without driver errors and their color values changed
-with live notes and song audio; emitted light was not measured optically.
+with live notes and song audio. The dense-song test checks distinct hues separately
+from brightness and confirms that every sampled color has a zero channel.
+Emitted light was not measured optically. Host regressions cover quiet-to-loud
+Wave transitions, scale recovery, silence, vertical headroom and LED hue holding.
 
-A separate 60-second sampler stress run combined four sample voices, four synth
+The preceding update's 60-second sampler stress run combined four sample voices, four synth
 voices, eight drums and microphone recording. Peak audio load was 42.2%, with no
 new I2S/event overflows, exchange errors or dropped recording blocks. Free heap
 was approximately 50 KB. The regular project and backup checksums were unchanged.

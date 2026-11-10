@@ -134,5 +134,6 @@ Every workspace menu includes **Key reference** for the current screen.
 `Fn+7` opens the FFT mixer: ←/→ selects a strip, ↑/↓ changes level, M/S toggles
 mute/solo. `Fn+8` opens Visuals: ←/→ or Enter changes mode, ↑/↓ changes sensitivity,
 and P cycles palettes. **Opt → SETTINGS** configures smoothing, motion and RGB
-brightness. These arrow controls also accept Fn.
+brightness. Wave uses automatic scaling; sensitivity affects the FFT views and LED.
+These arrow controls also accept Fn.
 [Four visualization modes and RGB feedback](audio-visuals.md)

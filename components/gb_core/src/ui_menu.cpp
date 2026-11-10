@@ -127,8 +127,8 @@ constexpr MenuItem visualActions[] = {
 constexpr MenuItem visualSettings[] = {
     {"Visualization", "Left/right also changes the view", O::VisualParameter, 0},
     {"Palette", "Neon / Sunset / Ocean / Rainbow", O::VisualParameter, 1},
-    {"Sensitivity", "Display gain only; audio unchanged", O::VisualParameter, 2},
-    {"Smoothing", "Spectrum release: fast to slow", O::VisualParameter, 3},
+    {"Sensitivity", "FFT / LED gain; Wave scales itself", O::VisualParameter, 2},
+    {"Smoothing", "Spectrum / Wave scale release", O::VisualParameter, 3},
     {"Motion speed", "Waterfall scroll / orbit rotation", O::VisualParameter, 4}
 };
 constexpr MenuItem fftSettings[] = {

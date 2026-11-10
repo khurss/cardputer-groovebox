@@ -82,11 +82,31 @@ void AudioVisual::process(const AudioFrame& frame) {
         unsigned old=bands_[b], divisor=1u<<settings_.smoothing;
         bands_[b] = target>=old ? target : old-std::max(1u,(old-target)/divisor);
     }
-    // Rising zero-crossing trigger reduces waveform jitter without normalizing volume.
+    // Auto range: catch a louder transient immediately, recover zoom gradually.
+    // A fixed noise floor avoids magnifying silence; keep 15% vertical headroom.
+    float wavePeak=0;
+    for (auto x:frame.mono) wavePeak=std::max(wavePeak,std::abs(x-mean));
+    constexpr float release[]={.70f,.85f,.93f};
+    waveScale_=std::max({32.f,wavePeak,waveScale_*release[settings_.smoothing]});
+    // Rising zero-crossing trigger reduces horizontal jitter.
     unsigned trigger=0;
     for (unsigned i=1;i<kFftSize/2;++i)
         if (frame.mono[i-1]<=mean && frame.mono[i]>mean) { trigger=i; break; }
-    for (unsigned i=0;i<120;++i) wave_[i]=int16_t(std::clamp((frame.mono[trigger+i*2]-mean)*gain/32768.f,-1.f,1.f)*255);
+    for (unsigned i=0;i<120;++i)
+        wave_[i]=peak_<=2 ? 0 : int16_t((frame.mono[trigger+i*2]-mean)/waveScale_*216);
+    // Hold each hue for 250 ms: rapid note-to-note changes can visually blend.
+    // Multiple strong spectral peaks add a slow palette sweep during dense mixes.
+    if (peak_<=2 || !dominantBin_) ledHold_=0;
+    else if (!ledHold_) {
+        unsigned peaks=0;
+        for (unsigned i=2;i<kFftSize/2;++i)
+            if (real_[i]>.25f*strongest && real_[i]>real_[i-1] && real_[i]>=real_[i+1]) ++peaks;
+        if (peaks>=2) ledPhase_=(ledPhase_+13)%256;
+        float semitones=12*std::log2(dominantBin_*62.5f/440.f)+69;
+        unsigned note=unsigned(std::max(0,int(std::lround(semitones))))%12;
+        ledPosition_=(note*255/11+(peaks>=2?ledPhase_:0))%256;
+        ledHold_=4;
+    } else --ledHold_;
     for (unsigned n=0;n<settings_.motion;++n) {
         std::memcpy(history_[historyAt_],bands_,sizeof(bands_)); historyAt_=(historyAt_+1)%48;
     }
@@ -111,11 +131,17 @@ uint16_t AudioVisual::ink(unsigned position,unsigned intensity) const {
 }
 uint32_t AudioVisual::ledRgb() const {
     if (!settings_.led || peak_<=2 || !dominantBin_) return 0;
-    // Pitch class from the dominant FFT bin; output energy controls brightness.
-    float semitones=12*std::log2(dominantBin_*62.5f/440.f)+69;
-    unsigned note=unsigned(std::max(0,int(std::lround(semitones))))%12;
+    // Remove the white component from screen palettes, then normalize brightness.
+    // At least one physical LED channel stays off, even at maximum signal level.
+    uint32_t color=rgb(settings_.palette,ledPosition_);
+    unsigned channels[]={unsigned(color>>16),unsigned((color>>8)&255),unsigned(color&255)};
+    unsigned low=std::min({channels[0],channels[1],channels[2]});
+    unsigned span=std::max({channels[0],channels[1],channels[2]})-low;
     unsigned level=std::min(255u,peak_*(1u<<settings_.gain)/64);
-    return rgb(settings_.palette,note*255/11,level*settings_.led/100);
+    unsigned brightness=level*settings_.led/100;
+    uint32_t result=0;
+    for (auto channel:channels) result=(result<<8)|((channel-low)*brightness/std::max(1u,span));
+    return result;
 }
 void AudioVisual::spectrum(Canvas& c,int top,int height) const {
     for (int y=top;y<top+height;y+=12) c.fillRect(4,y,232,1,color::Panel);
@@ -128,7 +154,9 @@ void AudioVisual::spectrum(Canvas& c,int top,int height) const {
 void AudioVisual::draw(Canvas& c,bool playing) const {
     c.fillRect(0,0,240,135,color::Background);
     style::header(c,modeName(settings_.mode),playing?"PLAY":"LIVE");
-    char text[40]; std::snprintf(text,sizeof(text),"%s  x%u  %s",paletteName(settings_.palette),1u<<settings_.gain,smoothingName(settings_.smoothing));
+    char text[40];
+    if (settings_.mode==1) std::snprintf(text,sizeof(text),"%s  AUTO  %s",paletteName(settings_.palette),smoothingName(settings_.smoothing));
+    else std::snprintf(text,sizeof(text),"%s  x%u  %s",paletteName(settings_.palette),1u<<settings_.gain,smoothingName(settings_.smoothing));
     c.text(5,19,text,color::Muted);
     if (settings_.mode==0) {
         spectrum(c,34,72); c.text(5,111,"63Hz",color::Muted); c.text(102,111,"1k",color::Muted); c.text(200,111,"16kHz",color::Muted);
@@ -149,7 +177,7 @@ void AudioVisual::draw(Canvas& c,bool playing) const {
         }
         c.text(105,72,peak_>2?"AUDIO":"QUIET",color::Text);
     }
-    style::footer(c,"L/R view U/D gain  P color  Opt setup");
+    style::footer(c,settings_.mode==1 ? "L/R view  AUTO scale  P color  Opt" : "L/R view U/D gain  P color  Opt setup");
 }
 void AudioVisual::drawMixer(Canvas& c,const Project& p,uint8_t strip,bool playing) const {
     c.fillRect(0,0,240,135,color::Background); style::header(c,"MIXER / FFT",playing?"PLAY":"LIVE");

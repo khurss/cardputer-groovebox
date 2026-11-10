@@ -13,6 +13,12 @@ def visual(device):
     return parse_fields(device.wait_for('VIS '))
 
 
+def hue(rgb):
+    channels = [(rgb >> shift) & 255 for shift in (16, 8, 0)]
+    high = max(channels)
+    return tuple(channel * 15 // high for channel in channels) if high else (0, 0, 0)
+
+
 def checks():
     r = Report()
     d = open_device()
@@ -63,13 +69,15 @@ def checks():
         before = d.cpu()
         d.key('8', 'f')
         colors = set()
+        saturated = True
         for mode in range(4):
             r.check(f'visual mode {mode} selected', visual(d)['mode'] == mode)
             first_frame = visual(d)['frames']
             for _ in range(12):
                 time.sleep(.25)
                 v = visual(d)
-                colors.add(v['rgb'])
+                colors.add(hue(v['rgb']))
+                saturated &= min((v['rgb'] >> shift) & 255 for shift in (16, 8, 0)) == 0
                 if v['peak'] > 1557:
                     raise RuntimeError('analysis observed output above the 5% ceiling')
             r.check(f'visual mode {mode} receives ongoing audio', visual(d)['frames'] - first_frame >= 40)
@@ -84,7 +92,8 @@ def checks():
         r.check('FFT and display fit timing budget', v['fft_max_us'] < 15000 and after['ui_frame_max_us'] < 50000)
         r.check('audio DSP stays below 50 percent', after['load_permille'] < 500)
         r.check('no audio or queue failures', all(after[k] == before[k] for k in ('tx_overflows', 'rx_overflows', 'failures', 'event_overflows')))
-        r.check('RGB transport works with varied song colors', len(colors - {0}) > 2 and v['rgb_ready'] == 1 and v['rgb_failures'] == 0)
+        r.check('RGB transport works with varied song hues', len(colors - {(0, 0, 0)}) > 2 and v['rgb_ready'] == 1 and v['rgb_failures'] == 0)
+        r.check('dense song colors have no white component', saturated)
         print('INFO visual', v)
         print('INFO audio/display', after)
         d.level(100)

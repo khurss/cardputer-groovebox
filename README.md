@@ -55,7 +55,8 @@ referenced separately, so transfer the `samples` folder with your projects.
 
 Press **Fn+7** for a mixer with a live FFT spectrum, or **Fn+8** for four configurable
 visualizations. Choose colors, sensitivity, smoothing and motion in SETTINGS.
-The RGB LED follows instrument and song audio, with adjustable brightness.
+Wave automatically fits quiet passages and loud peaks. The RGB LED follows instrument
+and song audio with saturated, held colors and adjustable brightness.
 
 ![FFT mixer and four configurable audio-reactive visualizations](docs/images/audio-visuals.png)
 
