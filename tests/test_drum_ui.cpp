@@ -305,3 +305,55 @@ TEST(warningReplacesNoCardMessage) {
     CHECK_EQ(canvas.texts.find("LOAD ERR") != std::string::npos, true);
     CHECK_EQ(canvas.texts.find("NO SD") == std::string::npos, true);
 }
+
+TEST(cyclingThroughAllGridsKeepsThePattern) {
+    Fixture f;
+    for (const char* k = "qwertyuiasdfghjk"; *k; ++k) f.tap(*k);
+    for (int i = 0; i < 6; ++i) f.withFn('g');
+    CHECK_EQ(f.project.drums[0].grid == Grid::Sixteenth, true);
+    for (int step = 0; step < 16; ++step) CHECK_EQ(f.project.drums[0].velocity[0][step], kNormalVelocity);
+}
+
+TEST(undoAfterGridRunRestoresOriginal) {
+    Fixture f;
+    f.tap('w');
+    for (int i = 0; i < 3; ++i) f.withFn('g');
+    f.withFn('z');
+    CHECK_EQ(f.project.drums[0].grid == Grid::Sixteenth, true);
+    CHECK_EQ(f.project.drums[0].velocity[0][1], kNormalVelocity);
+}
+
+TEST(gridRunEndsOnOtherKey) {
+    Fixture f;
+    f.withFn('g');
+    f.tap('q');
+    f.withFn('g');
+    CHECK_EQ(f.project.drums[0].grid == Grid::Quarter, true);
+    CHECK_EQ(f.project.drums[0].velocity[0][0] != 0, true);
+}
+
+TEST(undoDoesNotCrossAPatternSwitch) {
+    Fixture f;
+    f.tap('q');
+    f.tap(']');
+    const size_t before = f.sent.commands.size();
+    f.withFn('z');
+    CHECK_EQ(f.sent.commands.size(), before);
+}
+
+TEST(undoDoesNotCrossASoundChange) {
+    Fixture f;
+    f.tap('q');
+    f.tap('c');
+    f.withFn('z');
+    CHECK_EQ(f.project.drums[0].velocity[0][0], kNormalVelocity);
+}
+
+TEST(editCountCountsEdits) {
+    Fixture f;
+    CHECK_EQ(f.ui.editCount(), 0u);
+    f.tap('q');
+    CHECK_EQ(f.ui.editCount(), 1u);
+    f.tap('2');
+    CHECK_EQ(f.ui.editCount(), 1u);
+}

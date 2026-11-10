@@ -1,5 +1,6 @@
 #include "gb/project_io.h"
 
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <new>
@@ -141,7 +142,7 @@ bool appendSuffix(char* out, const char* path, const char* suffix) {
 
 LoadResult readImage(const char* path, Project& out, uint8_t* buffer, size_t capacity) {
     FILE* file = fopen(path, "rb");
-    if (!file) return LoadResult::NotFound;
+    if (!file) return errno == ENOENT ? LoadResult::NotFound : LoadResult::ReadError;
     const size_t size = fread(buffer, 1, capacity, file);
     fclose(file);
     return deserializeProject(buffer, size, out);
@@ -221,7 +222,9 @@ LoadResult loadProjectFile(const char* path, Project& out, uint8_t* buffer, size
     char backup[kMaxPathLength];
     if (!appendSuffix(backup, path, ".bak")) return primary;
     const LoadResult fallback = readImage(backup, out, buffer, capacity);
-    return fallback == LoadResult::Ok ? fallback : primary;
+    // No main file means an interrupted save, so a good backup is the normal result.
+    if (primary == LoadResult::NotFound) return fallback == LoadResult::Ok ? LoadResult::Ok : fallback;
+    return fallback == LoadResult::Ok ? LoadResult::OkFromBackup : primary;
 }
 
 }  // namespace gb

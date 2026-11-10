@@ -127,7 +127,7 @@ TEST(saveKeepsPreviousVersionAsBackup) {
     saveProjectFile(path.c_str(), changed, buffer, sizeof(buffer));
     corruptFile(path);
     Project& out = loaded();
-    CHECK_EQ(loadProjectFile(path.c_str(), out, buffer, sizeof(buffer)) == LoadResult::Ok, true);
+    CHECK_EQ(loadProjectFile(path.c_str(), out, buffer, sizeof(buffer)) == LoadResult::OkFromBackup, true);
     CHECK_EQ(out.bpm, 133);
 }
 
@@ -160,8 +160,17 @@ TEST(damagedPrimaryDoesNotReplaceGoodBackup) {
     saveProjectFile(path.c_str(), third, buffer, sizeof(buffer));
     corruptFile(path);
     Project& out = loaded();
-    CHECK_EQ(loadProjectFile(path.c_str(), out, buffer, sizeof(buffer)) == LoadResult::Ok, true);
+    CHECK_EQ(loadProjectFile(path.c_str(), out, buffer, sizeof(buffer)) == LoadResult::OkFromBackup, true);
     CHECK_EQ(out.bpm, 133);
+}
+
+TEST(damagedBackupWithoutPrimaryIsReported) {
+    const std::string path = tempDir() + "/p.gbp";
+    saveProjectFile(path.c_str(), sample(), buffer, sizeof(buffer));
+    saveProjectFile(path.c_str(), sample(), buffer, sizeof(buffer));
+    remove(path.c_str());
+    corruptFile(path + ".bak");
+    CHECK_EQ(loadProjectFile(path.c_str(), loaded(), buffer, sizeof(buffer)) == LoadResult::BadChecksum, true);
 }
 
 TEST(refusesToSaveInvalidProject) {

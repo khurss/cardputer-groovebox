@@ -82,6 +82,18 @@ class Device:
         self.send("C")
         return parse_fields(self.wait_for("CPU"))
 
+    def read_boot(self, timeout=15):
+        deadline = time.monotonic() + timeout
+        lines = []
+        while time.monotonic() < deadline:
+            line = self.read_line(max(deadline - time.monotonic(), 0))
+            if line is None:
+                break
+            lines.append(line)
+            if line.startswith("READY"):
+                break
+        return lines
+
     def wait_ready(self):
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
@@ -194,12 +206,26 @@ def run():
 
     os.close(device.fd)
     reset_device()
-    time.sleep(1)
     device = open_device()
+    boot = device.read_boot(timeout=15)
+    report.check("display is landscape", any("width=240 height=135" in line for line in boot), str(boot))
+    report.check("keyboard started", not any(line.startswith("ERROR") for line in boot), str(boot))
     device.wait_ready()
     fields, lanes = device.state()
     report.check("pattern survives reboot", lanes[1] == "x...x...x...x...", lanes[1])
     report.check("swing survives reboot", fields["swing"] == 54, str(fields["swing"]))
+
+    device.key("y")  # Step 5 on lane 0, the selected lane after a reboot.
+    line = device.wait_for("SAVE", 6.0)
+    report.check("edit saved while stopped", "ok=1" in line, line)
+    os.close(device.fd)
+    reset_device()
+    device = open_device()
+    device.wait_ready()
+    fields, lanes = device.state()
+    report.check("stopped edit survives reboot", lanes[0][5] == "x", lanes[0])
+    device.key("y")
+    device.wait_for("SAVE", 6.0)
     os.close(device.fd)
 
     print(f"{report.failures} failures")

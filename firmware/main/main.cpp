@@ -25,6 +25,7 @@ constexpr char kDirectory[] = "/sd/groovebox";
 constexpr char kProjects[] = "/sd/groovebox/projects";
 constexpr char kProjectPath[] = "/sd/groovebox/projects/default.gbp";
 constexpr uint32_t kFrameMs = 50;
+constexpr int64_t kIdleSaveMs = 3000;
 
 // The audio task owns audioProject; the interface edits uiProject and sends the same commands.
 gb::Project audioProject;
@@ -41,6 +42,7 @@ gb::Engine* engine = nullptr;
 bool storageAvailable = false;
 bool saveAllowed = false;
 bool loadFailed = false;
+bool loadedBackup = false;
 
 bool sendCommand(void*, const gb::Command& command) {
     while (!commands.push(command)) vTaskDelay(pdMS_TO_TICKS(1));
@@ -166,8 +168,10 @@ void loadProject() {
         mkdir(kProjects, 0777);
         const gb::LoadResult result = gb::loadProjectFile(kProjectPath, uiProject, fileBuffer, sizeof(fileBuffer));
         printf("LOAD result=%d\n", static_cast<int>(result));
-        loadFailed = result != gb::LoadResult::Ok && result != gb::LoadResult::NotFound;
-        saveAllowed = storageAvailable && !loadFailed;
+        loadFailed = result != gb::LoadResult::Ok && result != gb::LoadResult::NotFound &&
+                     result != gb::LoadResult::OkFromBackup;
+        loadedBackup = result == gb::LoadResult::OkFromBackup;
+        saveAllowed = storageAvailable && !loadFailed && !loadedBackup;
     }
     audioProject = uiProject;
 }
@@ -176,7 +180,7 @@ void uiTask(void*) {
     static M5GFX display;
     static M5Canvas sprite(&display);
     display.init();
-    display.setRotation(1);
+    display.setRotation(0);
     display.setBrightness(120);
     sprite.setColorDepth(16);
     sprite.createSprite(240, 135);
@@ -187,28 +191,43 @@ void uiTask(void*) {
     SpriteCanvas canvas(sprite);
     static gb::DrumUi ui(uiProject, sendCommand, nullptr);
     if (loadFailed) ui.setWarning("LOAD ERR");
+    else if (loadedBackup) ui.setWarning("BACKUP");
     if (!hw::initKeyboard()) printf("ERROR keyboard\n");
     printf("READY\n");
 
     int64_t nextFrame = 0;
+    uint32_t savedEdits = ui.editCount();
+    uint32_t seenEdits = savedEdits;
+    int64_t lastEditMs = 0;
+    bool lastPlaying = false;
     while (true) {
         hw::KeyEvent event;
         while (hw::pollKey(event)) ui.onKey(event.code, event.pressed);
         pollConsole(ui);
 
-        if (ui.takeSaveRequest()) {
+        const int64_t now = esp_timer_get_time() / 1000;
+        const bool playing = engine->playing();
+        if (ui.editCount() != seenEdits) {
+            seenEdits = ui.editCount();
+            lastEditMs = now;
+        }
+        const bool saveDue = ui.takeSaveRequest() ||
+                             (!playing && seenEdits != savedEdits && now - lastEditMs >= kIdleSaveMs);
+        if (saveDue) {
             if (saveAllowed) {
                 const bool saved = gb::saveProjectFile(kProjectPath, uiProject, fileBuffer, sizeof(fileBuffer));
                 printf("SAVE ok=%d\n", saved ? 1 : 0);
+                savedEdits = seenEdits;
+                ui.setWarning(saved ? nullptr : "SAVE ERR");
             } else if (storageAvailable) {
                 printf("SAVE blocked\n");
+                savedEdits = seenEdits;
             }
         }
 
-        const int64_t now = esp_timer_get_time() / 1000;
-        const bool playing = engine->playing();
-        if (now >= nextFrame && (ui.takeDirty() || playing)) {
+        if (now >= nextFrame && (ui.takeDirty() || playing || playing != lastPlaying)) {
             nextFrame = now + kFrameMs;
+            lastPlaying = playing;
             ui.draw(canvas, engine->sceneTick(), playing, storageAvailable);
             sprite.pushSprite(0, 0);
         }

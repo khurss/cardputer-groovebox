@@ -9,7 +9,17 @@ namespace gb {
 
 constexpr size_t kProjectBufferSize = 32 * 1024;
 
-enum class LoadResult : uint8_t { Ok, NotFound, BadMagic, BadVersion, BadSize, BadChecksum, Invalid };
+enum class LoadResult : uint8_t {
+    Ok,
+    OkFromBackup,  // The main file was damaged and the backup was loaded.
+    NotFound,
+    ReadError,  // The file exists but could not be opened.
+    BadMagic,
+    BadVersion,
+    BadSize,
+    BadChecksum,
+    Invalid
+};
 
 // Writes the versioned file image. Returns its size, or 0 if the buffer is too small.
 size_t serializeProject(const Project& project, uint8_t* buffer, size_t capacity);

@@ -13,5 +13,6 @@ exec docker run --rm -v "$ROOT:/work" -w "/work/$PROJECT" -u "$(id -u):$(id -g)"
     cp -r "$IDF_PATH/components/fatfs" components/fatfs
     sed -i "s/^#define FF_FS_EXFAT.*/#define FF_FS_EXFAT\t\t1/" components/fatfs/src/ffconf.h
   fi
+  grep -q "^#define FF_FS_EXFAT[[:space:]]*1" components/fatfs/src/ffconf.h || { echo "exFAT was not enabled in FatFs"; exit 1; }
   exec idf.py "$@"
 ' bash "$@"

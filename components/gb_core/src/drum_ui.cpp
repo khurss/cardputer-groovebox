@@ -66,13 +66,17 @@ void DrumUi::send(const Command& out) {
 
 void DrumUi::apply(const Command& out) {
     applyEdit(project_, out);
+    ++editCount_;
     send(out);
 }
 
 void DrumUi::onKey(char code, bool pressed) {
     if (code == key::Fn) fn_ = pressed;
     else if (code == key::Shift) shift_ = pressed;
-    else if (pressed) onPress(code);
+    else if (pressed) {
+        if (!(fn_ && code == 'g')) gridRun_ = false;
+        onPress(code);
+    }
 }
 
 void DrumUi::onPress(char code) {
@@ -143,6 +147,7 @@ bool DrumUi::adjustSound(char code) {
     };
     for (const Binding& binding : kBindings) {
         if (code != binding.lower && code != binding.raise) continue;
+        undoAvailable_ = false;
         const int delta = code == binding.raise ? kSoundStep : -static_cast<int>(kSoundStep);
         const DrumSound& sound = project_.sounds[lane_];
         uint8_t value = sound.tune;
@@ -184,6 +189,7 @@ void DrumUi::clearPattern() {
 
 void DrumUi::selectPattern(int pattern) {
     if (pattern < 0 || pattern >= kPatternsPerTrack) return;
+    undoAvailable_ = false;
     pattern_ = pattern;
     apply(command(CommandType::SetScenePattern, 0, 0, static_cast<uint8_t>(pattern_)));
 }
@@ -196,15 +202,21 @@ void DrumUi::cycleLength() {
 }
 
 void DrumUi::cycleGrid() {
-    rememberForUndo();
+    if (!gridRun_) {
+        rememberForUndo();
+        gridRunOriginal_ = currentDrums();
+        gridRun_ = true;
+    }
     const size_t count = sizeof(kGridCycle) / sizeof(kGridCycle[0]);
     size_t index = 0;
     while (index < count && kGridCycle[index] != currentDrums().grid) ++index;
     const Grid next = kGridCycle[(index + 1) % count];
+    applyPatternContents(gridRunOriginal_);
     apply(command(CommandType::SetGrid, static_cast<uint8_t>(pattern_), 0, 0, static_cast<uint16_t>(next)));
 }
 
 void DrumUi::cycleSwing() {
+    undoAvailable_ = false;
     const size_t count = sizeof(kSwingValues);
     size_t index = 0;
     while (index < count && kSwingValues[index] != project_.swing) ++index;
@@ -214,6 +226,7 @@ void DrumUi::cycleSwing() {
 void DrumUi::changeBpm(int delta) {
     const int next = project_.bpm + delta;
     if (next < 40 || next > 240) return;
+    undoAvailable_ = false;
     apply(command(CommandType::SetBpm, 0, 0, 0, static_cast<uint16_t>(next)));
 }
 

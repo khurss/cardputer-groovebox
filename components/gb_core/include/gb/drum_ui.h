@@ -58,6 +58,7 @@ public:
     bool takeDirty();
     int selectedLane() const { return lane_; }
     int currentPattern() const { return pattern_; }
+    uint32_t editCount() const { return editCount_; }
 
     void setWarning(const char* text) {
         warning_ = text;
@@ -99,6 +100,9 @@ private:
     int undoPattern_ = 0;
     DrumPattern undoContents_;
     DrumPattern clipboard_;
+    uint32_t editCount_ = 0;
+    bool gridRun_ = false;
+    DrumPattern gridRunOriginal_;
 };
 
 }  // namespace gb
