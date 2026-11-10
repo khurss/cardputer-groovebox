@@ -12,6 +12,7 @@ int main(int argc,char** argv){
         char path[96];snprintf(path,sizeof(path),"%s/%s.gbp",destination,gb::demoName(i));
         const auto size=gb::serializeProject(project,buffer,sizeof(buffer));FILE* f=fopen(path,"wb");if(!f)return 1;
         const bool ok=fwrite(buffer,1,size,f)==size;const bool closed=fclose(f)==0;if(!ok||!closed)return 1;
-        printf("%s: %zu bytes, %u BPM, %u song entries, 82 bars, master 5%%\n",path,size,project.bpm,project.songLength);
+        unsigned bars=0;for(unsigned row=0;row<project.songLength;++row)bars+=project.song[row].repeats;
+        printf("%s: %zu bytes, %u BPM, %u song entries, %u bars, master 5%%\n",path,size,project.bpm,project.songLength,bars);
     }
 }

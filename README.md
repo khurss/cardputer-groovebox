@@ -7,7 +7,7 @@ keyboard controls the step sequencer, piano roll and mixer; projects and source
 audio live on microSD.
 
 [Quick start](docs/quick-start.md) · [Controls](docs/controls.md) ·
-[Documentation](docs/README.md) · [Synthwave demo projects](examples/README.md) ·
+[Documentation](docs/README.md) · [Demo projects](examples/README.md) ·
 [Build and install](#build-and-install)
 
 ![Cardputer Groovebox interface: Performance synthesizer, drum sequencer, piano roll, sound editor, mixer and song arrangement](docs/images/interface.png)
@@ -63,17 +63,22 @@ and song audio with saturated, held colors and adjustable brightness.
 Bare arrows navigate editors and menus; Performance preserves their musical keys.
 The synth opens in Performance by default. [Visuals, controls and RGB details →](docs/audio-visuals.md)
 
-## Retrowave and synthwave demo songs
+## Synthwave, techno and drum and bass demo songs
 
-**Projects → Add demo songs** installs three original, complete arrangements without
-overwriting existing files. Each has 82 bars, 29 song entries and 16 scenes, using
-the built-in drums and synths with no external samples.
+**Projects → Add demo songs** installs seven original, complete arrangements without
+overwriting existing files: three retrowave/synthwave, two techno and two drum and
+bass tracks. Each uses 29 song entries and 16 scenes, with built-in drums and synths
+and no external samples.
 
 | Project | Style | Tempo / key | Length |
 |---|---|---|---|
 | [Neon Drive](examples/projects/neon-drive.gbp) | Driving retrowave bass, bright arpeggios and lead | 108 BPM / A minor | ≈3:02 |
 | [Sunset Arcade](examples/projects/sunset-arcade.gbp) | Mellow synthwave with gentle swing | 92 BPM / D minor | ≈3:34 |
 | [Midnight Run](examples/projects/midnight-run.gbp) | Faster night-drive synthwave | 122 BPM / E minor | ≈2:41 |
+| [Circuit Pressure](examples/projects/circuit-pressure.gbp) | Acid-inspired techno with resonant bass | 132 BPM / A minor | ≈3:24 |
+| [Concrete Pulse](examples/projects/concrete-pulse.gbp) | Percussive, industrial-inspired techno | 140 BPM / F minor | ≈3:12 |
+| [Night Transit](examples/projects/night-transit.gbp) | Dark rolling drum and bass | 174 BPM / D minor | ≈3:19 |
+| [Liquid Signal](examples/projects/liquid-signal.gbp) | Melodic liquid drum and bass | 170 BPM / G minor | ≈3:23 |
 
 Load a demo, then press **Fn+4 → Enter** to play the song. Demos start at **5% master
 volume**. [Listen to previews and explore the arrangements →](examples/README.md)

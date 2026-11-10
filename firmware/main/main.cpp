@@ -556,7 +556,10 @@ void uiTask(void*) {
                     if (library.save(gb::demoName(i),*demo,true)) ++saved;
                 }
                 delete demo;
-                ui.projectResult(saved==3 ? "3 demo songs added" : saved ? "Added demos; existing names kept" : "No new files; names exist / SD error");
+                char result[48];
+                if(saved) snprintf(result,sizeof(result),"%u demos added; existing files kept",saved);
+                else snprintf(result,sizeof(result),"No new files; names exist / SD error");
+                ui.projectResult(result);
                 library.scan(ui.library());
             } else if (request == gb::ProjectAction::Save) {
                 const bool ok = saveAllowed && gb::saveProjectFile(projectPath, uiProject, fileBuffer, sizeof(fileBuffer));

@@ -13,7 +13,7 @@ Stop playback and recording, then open **Opt → SCREENS → Projects**.
   the current volume to avoid an unexpected jump.
 - **Save copy as…** writes a separate version while you continue in the current
   project. Open the copy from the list if you want to edit it instead.
-- **Add demo songs** installs three [complete demo arrangements](../examples/README.md)
+- **Add demo songs** installs seven [complete demo arrangements](../examples/README.md)
   without changing the current project or overwriting existing demo filenames.
 - **A project name in the list** opens that project. Press `Enter` to show the
   confirmation, then `Enter` again to save your current work and switch.

@@ -35,8 +35,9 @@ def checks():
         projects(d); project_row(d, 3); d.key('enter'); time.sleep(.5)
         _, lines = project(d)
         files = [x[5:] for x in lines if x.startswith('FILE ')]
-        demos = ('neon-drive', 'sunset-arcade', 'midnight-run')
-        r.check('all three demos installed', all(name in files for name in demos))
+        demos = ('neon-drive', 'sunset-arcade', 'midnight-run', 'circuit-pressure',
+                 'concrete-pulse', 'night-transit', 'liquid-signal')
+        r.check('all seven demos installed', all(name in files for name in demos))
         for name in demos:
             project_row(d, 4 + files.index(name)); d.key('enter'); d.key('enter'); d = switched(d)
             r.check(name + ' loads at 5 percent', name in project(d)[0] and state(d)['master'] == 5 and state(d)['output_limit'] == 5)
@@ -45,7 +46,7 @@ def checks():
             d.key('enter'); wait_state(d, playing=1)
             time.sleep(.2)
             d.send('C reset'); d.wait_for('CPU '); before = d.cpu()
-            for screen in ('1', '2', '3', '4', '5', '6'):
+            for screen in ('1', '2', '3', '4', '5', '6', '7', '8'):
                 d.key(screen, 'f'); time.sleep(.6)
             after = d.cpu()
             r.check(name + ' chorus stays within DSP budget', after['load_permille'] < 500)
