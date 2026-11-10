@@ -1,68 +1,75 @@
-# Меню и управление
+# Menu navigation and settings
 
-Нажмите **Opt**, чтобы открыть или закрыть меню. Fn теперь только модификатор
-и не показывает всплывающих окон. Справка доступна через SCREENS → Key reference,
-обучение — через SCREENS → Quick start.
+Press **Opt** to open or close the menu. `Fn` is only a modifier and does not open a
+popup. Open help through **SCREENS → Key reference** and the tutorial through
+**SCREENS → Quick start**. [All guides](README.md)
 
-**Esc** выполняет возврат/отмену: сначала выходит из редактирования значения,
-затем закрывает меню. На основном рабочем экране Esc открывает меню; в
-Performance и Sound editor возвращает piano roll.
+![Menu with SCREENS, ACTIONS and SETTINGS tabs](images/menu.png)
 
-В меню три вкладки:
+**Esc** goes back or cancels: it first leaves value editing, then closes the menu.
+On a main workspace it opens the menu; in Performance and Sound editor it returns
+to the piano roll.
 
-- **SCREENS** — ударные, синт, сцены, песня, микшер, сэмплер, Projects, Quick start и Key reference.
-- **ACTIONS** — действия текущего экрана: запуск, запись, копирование, вставка,
-  отмена, очистка; на сэмплере также выбор WAV, границы, сохранение и нарезка.
-- **SETTINGS** — общая громкость, темп, свинг и параметры текущего режима.
+## Three tabs
 
-`Fn+↑/↓` выбирают строку. `Tab`, `Fn+←/→` или `[`/`]` переключают вкладку.
-На вкладке экранов `Enter` открывает выбранный экран; клавиши `1..6` открывают его
-напрямую. Сочетания `Fn+1..6` работают из любой вкладки.
+- **SCREENS**: Drums, Synth, Scenes, Song, Mixer, Sampler, Projects, Quick start and
+  Key reference.
+- **ACTIONS**: commands for the current workspace, such as play, record, copy,
+  paste, undo and clear. The sampler also offers WAV browsing, selection bounds,
+  slice saving and chopping.
+- **SETTINGS**: master volume, tempo, swing and parameters for the current workspace.
 
-На вкладке настроек нажмите `Enter`: значение выделится жёлтым. Стрелки меняют его,
-следующий `Enter` завершает редактирование. `Backspace` сначала выходит из правки
-значения, затем закрывает меню. Значения применяются сразу, Backspace их не отменяет.
-`Tab` позволяет перейти в другую вкладку прямо из правки.
+Use `Fn+↑/↓` to select a row. `Tab`, `Fn+←/→` or `[` / `]` changes tabs.
+In SCREENS, `Enter` opens the selected screen; `1..6` opens a workspace directly.
+`Fn+1..6` works from any menu tab.
 
-Общая громкость `+`/`-` работает и внутри меню: 5 % за нажатие, с `Ctrl` — 1 %.
-В настройке темпа `Shift` даёт шаг 10 BPM; для параметров звука `Ctrl` даёт точный
-шаг 1 вместо 8. Недоступные пункты выделены другим цветом, причина показана внизу.
-После копирования, вставки, отмены и очистки появляется подтверждение результата.
+In SETTINGS, press `Enter` to highlight a value in yellow. Use the arrows to change
+it, then `Enter` to finish editing. `Backspace` or `Esc` first leaves value editing,
+then closes the menu. **Values apply immediately; leaving the editor does not undo
+a change.** `Tab` can switch tabs while editing.
 
-## Доступные настройки
+Master volume `+` / `−` also works inside the normal menu: 5% per press, or 1% with
+`Ctrl`. `Shift` changes tempo in 10 BPM steps; `Ctrl` adjusts sound parameters by 1
+instead of 8. Disabled items show their reason in the footer. Copy, paste, undo and
+clear display a result message.
 
-На всех экранах доступны master, tempo и swing. Дополнительно:
+## Available settings
 
-- Ударные: длина, сетка, паттерн.
-- Синт: дорожка, паттерн, октава, длина/сетка, quantize, масштаб нот,
-  waveform, ADSR, cutoff/resonance, glide, уровень, параметры арпеджиатора.
-- Сцены: выбранная сцена, дорожка, назначенный паттерн.
-- Песня: строка, сцена для вставки, сцена записи и количество повторов.
-- Микшер: канал, уровень, mute, solo.
-- Сэмплер: пэд, назначенный слот, паттерн, количество нарезок, длина и сетка.
-  При выборе слота внизу видно имя исходного WAV.
+All workspaces expose master volume, tempo and swing, plus:
 
-## Действия и запись
+| Workspace | Additional settings |
+|---|---|
+| Drums | Pattern length, grid and pattern number |
+| Synth | Track, pattern, octave, length/grid, quantize, pitch zoom, preset, layout, root/scale, waveform, ADSR, cutoff/resonance, glide, level and arpeggiator |
+| Scenes | Scene, track and assigned pattern |
+| Song | Row, scene to insert, entry scene and repeats |
+| Mixer | Channel, channel level, mute and solo |
+| Sampler | Pad, assigned slot, pattern, chop count, length and grid; slot selection shows the source WAV filename |
 
-Открытие меню не останавливает музыку или запись. Зажатые до открытия ноты можно
-отпускать с открытым меню; кнопки навигации не играют новые ноты. `Space` управляет
-транспортом и из меню. При смене экрана завершается запись нот, как при `Fn+1..6`;
-запись микрофона продолжается независимо.
+## Actions and recording
 
-На вкладке ACTIONS сэмплера доступны Browse WAV, Record microphone, Waveform editor,
-Pad sequencer, Play/stop, Mark start/end, Save selected slice, Chop selection,
-Reset selection, Clear steps, Undo и Delete sample slot. Сохранение и удаление
-нарезок доступны на остановленном транспорте. Удаление слота имеет отдельный экран
-подтверждения: `Enter` удаляет, `Backspace` отменяет. Сам WAV сохраняется.
+Opening the menu does not stop playback or recording. Notes held before opening
+it can still be released; navigation keys do not play new notes. `Space` controls
+transport from the menu. Changing workspace ends synth recording, just like
+`Fn+1..6`; microphone recording continues independently.
 
-Правки длины/сетки, звука и арпеджиатора используют существующую отмену. Настройки
-проекта сохраняются обычным способом: после остановки или трёх секунд без правок.
-Положение меню и выделенная строка не записываются в проект.
+Sampler ACTIONS includes Browse WAV, Record microphone, Waveform editor, Pad
+sequencer, Play/stop, Mark start/end, Save selected slice, Chop selection, Reset
+selection, Clear steps, Undo and Delete sample slot. Saving and deleting slices
+requires stopped transport. **Delete sample slot** opens a confirmation: `Enter`
+deletes, `Backspace` or `Esc` cancels. The source WAV remains on the card.
 
-Подробнее: [проекты](projects.md), [quick start](quick-start.md),
-[раскладки](controls.md), [Performance](synth-performance.md).
+Pattern length/grid, synth sound and arpeggiator edits use the existing undo
+mechanism. Project settings save after stopping or after three idle seconds while
+stopped. Menu position and the selected menu row are not stored in the project.
 
-Проверки:
+Projects and help are separate modal screens that capture keyboard input; close
+them before using workspace shortcuts or volume keys.
+
+See [projects](projects.md), [quick start](quick-start.md), [controls](controls.md)
+and [synth Performance](synth-performance.md).
+
+## Developer checks
 
 ```bash
 make test
@@ -72,4 +79,5 @@ python3 tools/slot.py install-app firmware/build/groovebox.bin
 python3 tools/device_menu_test.py
 ```
 
-Проверки на устройстве используют отдельный проект и потолок звука 5 %.
+Hardware checks use an isolated project and a 5% audio output ceiling. See the
+[installation requirements](../README.md#build-and-install) before installing firmware.

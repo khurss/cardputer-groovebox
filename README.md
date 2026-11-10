@@ -1,89 +1,113 @@
-# Cardputer Groovebox
+# Cardputer Groovebox — Synthesizer, Drum Machine & Sampler
 
-Портативная грувбокс-станция для **M5Stack Cardputer ADV**: ударные, четыре синта,
-сэмплер, сцены, аранжировка и микшер. Управление с физической клавиатуры;
-проекты и WAV хранятся на microSD.
+A portable music workstation for **M5Stack Cardputer ADV (ESP32-S3)**. Make beats
+with an eight-sound drum machine, play four synth tracks, slice WAV files or live
+microphone recordings, and arrange patterns into complete songs. The physical
+keyboard controls the step sequencer, piano roll and mixer; projects and source
+audio live on microSD.
 
-## Начать играть
+[Quick start](docs/quick-start.md) · [Controls](docs/controls.md) ·
+[Documentation](docs/README.md) · [Synthwave demo projects](examples/README.md) ·
+[Build and install](#build-and-install)
 
-1. Откройте **Opt → SCREENS → Quick start**: инструкция доступна прямо на устройстве.
-2. На экране Drums выберите звук `1..8`, включите шаги `qwertyui` / `asdfghjk`.
-3. `Space` запускает цикл. `+` / `−` меняют общую громкость.
-4. `Fn+2` открывает синт. **Opt → ACTIONS → Performance** включает струнную раскладку
-   с плавными переходами. Удерживайте `Z`, нажмите `X`, отпустите `X`: звук вернётся к `Z`.
-5. `Alt` включает запись нот. Повторный `Alt` заканчивает проход.
-6. **Opt → SCREENS → Projects**: сохранение, новый проект, копия и открытие.
+![Cardputer Groovebox interface: Performance synthesizer, drum sequencer, piano roll, sound editor, mixer and song arrangement](docs/images/interface.png)
 
-**Esc** теперь работает как «назад/отмена»; на основном экране открывает меню.
+*Interface screenshots rendered with the device's UI drawing code, including its
+RGB332 color palette. Individual screens are shown at 2× the native 240×135 size.*
 
-`Fn` — только модификатор: никаких всплывающих окон при навигации или игре.
-**Opt** открывает меню; **Tab** меняет вкладку; **Fn+стрелки** выбирают пункт;
-**Enter** подтверждает; **Backspace** возвращает назад.
+## Make your first beat
 
-![Интерфейс: синт, звук, проекты и обучение](docs/images/interface.png)
+1. Open **Opt → SCREENS → Quick start** for the built-in tutorial.
+2. In **Drums**, choose a sound with `1..8`, then toggle steps with `qwertyui` /
+   `asdfghjk`.
+3. Press `Space` to play. Use `+` / `−` to adjust master volume.
+4. Press `Fn+2`, then **Opt → ACTIONS → Performance** for the synth's string layout.
+   Hold `Z`, press `X`, then release `X`: the note slides back to the held `Z`.
+5. With the loop playing, press `Alt` to record notes and `Alt` again to finish.
+6. Open **Opt → SCREENS → Projects** to save, create, copy or load a project.
 
-*Отрисовка текущего UI тем же кодом, который используется на устройстве.*
+`Opt` opens the menu; `Fn` is only a modifier. `Esc` goes back or cancels, and opens
+the menu from a main workspace. [Follow the full first-track guide →](docs/quick-start.md)
 
-## Что внутри
+## Features
 
-| Раздел | Возможности |
+| Workspace | What you can do |
 |---|---|
-| Drums | 8 синтезируемых ударных, 16 паттернов, 4/8/16 шагов, акценты и swing |
-| Synth | 4 дорожки, piano roll, живая запись и quantize, ADSR, фильтр, glide, арпеджиатор |
-| Performance | 4 клавиатурные строки-струны, legato с возвратом к удержанной ноте, root/scale, 6 стартовых тембров |
-| Sampler | WAV с SD или микрофон, волнограмма, выделение, равная нарезка, 32 слота, 8 пэдов |
-| Scenes / Song | 16 сцен по 6 дорожек; песня из 64 записей с повторами |
-| Mixer | MAIN и 6 каналов, уровни, mute, solo |
-| Projects | Именованные `.gbp`, автосохранение, резервная копия, Save copy, безопасная смена проекта |
+| **Drum machine** | Sequence eight synthesized percussion sounds across 16 patterns, with 4/8/16 steps, accents and swing |
+| **Synthesizer** | Play four tracks, record live notes, edit in the piano roll, and shape waveform, ADSR, filter, resonance and glide |
+| **Performance** | Play four keyboard rows as strings, with legato, held-note return, root/scale selection, six presets and animated pitch trails |
+| **Arpeggiator** | Turn live or recorded chords into Up, Down or UpDown patterns with rate, octave and gate controls |
+| **Sampler** | Import WAV from microSD or record the microphone; select and chop waveforms into 32 sample slots for eight sequencer pads |
+| **Scenes and Song** | Combine six tracks into 16 scenes and arrange up to 64 song entries with repeats |
+| **Mixer** | Set master and six track levels, with per-track mute and solo |
+| **Projects** | Create named `.gbp` files, autosave, keep a backup, save copies and reopen your last project |
 
-Синт использует общий пул из 5 голосов, во время воспроизведения сэмплов — 4.
-Сэмплер имеет 4 голоса и около 65 секунд суммарного декодированного аудио в кэше.
-Ноты и раскладка сохраняются в проекте. Чтение форматов v1–v5; запись v5.
+![Cardputer sampler waveform editor, pad sequencer, scenes, WAV browser, menu and project manager](docs/images/sampler-projects.png)
 
-## Демо-песни
+The four synth tracks and live playing share **five synth voices**, reduced to four
+while samples play. The sampler provides four playback voices and roughly
+65 seconds of total decoded sample storage. Each synth pattern holds up to
+64 notes. Projects are saved as GBP v5 and can be loaded from v1–v5; WAV audio is
+referenced separately, so transfer the `samples` folder with your projects.
 
-**Projects → Add demo songs** добавляет Neon Drive, Sunset Arcade и Midnight Run.
-Это три оригинальные песни по 82 такта, продолжительностью около трёх минут,
-без внешних WAV. Откройте проект, затем **Fn+4 → Enter**.
-[Скачать проекты, послушать припевы и посмотреть аранжировку](examples/README.md).
+## Retrowave and synthwave demo songs
 
-## Документация
+**Projects → Add demo songs** installs three original, complete arrangements without
+overwriting existing files. Each has 82 bars, 29 song entries and 16 scenes, using
+the built-in drums and synths with no external samples.
 
-- [Quick start: первый трек](docs/quick-start.md)
-- [Меню](docs/menu.md)
-- [Все кнопки и раскладки](docs/controls.md)
-- [Проекты, сохранение и восстановление](docs/projects.md)
-- [Синт и режим Performance](docs/synth-performance.md)
-- [Сэмплер: запись и нарезка](docs/stage-5-sampler.md)
-- [Сцены, песня и микшер](docs/stage-4.md)
-- [Обновление всех экранов, визуализация и Esc](docs/visual-refresh.md)
-- [Ревью UX/UI и выбранный вариант](docs/ux-review.md)
+| Project | Style | Tempo / key | Length |
+|---|---|---|---|
+| [Neon Drive](examples/projects/neon-drive.gbp) | Driving retrowave bass, bright arpeggios and lead | 108 BPM / A minor | ≈3:02 |
+| [Sunset Arcade](examples/projects/sunset-arcade.gbp) | Mellow synthwave with gentle swing | 92 BPM / D minor | ≈3:34 |
+| [Midnight Run](examples/projects/midnight-run.gbp) | Faster night-drive synthwave | 122 BPM / E minor | ≈2:41 |
 
-## Сборка и установка
+Load a demo, then press **Fn+4 → Enter** to play the song. Demos start at **5% master
+volume**. [Listen to previews and explore the arrangements →](examples/README.md)
 
-Среда: ESP-IDF 5.5.1, M5GFX 0.3.0; `tools/idf.sh` использует контейнер ESP-IDF.
-Для локальных тестов нужны C++17, GNU make и Python 3.
+## Documentation
+
+- [Quick start: make your first track](docs/quick-start.md)
+- [Menu navigation and settings](docs/menu.md)
+- [Keyboard shortcuts and layouts](docs/controls.md)
+- [Projects, saving and recovery](docs/projects.md)
+- [Synth Performance, legato and sound presets](docs/synth-performance.md)
+- [Live recording and piano roll editing](docs/stage-3.md)
+- [Scenes, song arrangement, mixer and arpeggiator](docs/stage-4.md)
+- [Sampler: WAV import, microphone recording and slicing](docs/stage-5-sampler.md)
+- [Interface gallery and visual design review](docs/visual-refresh.md)
+- [UX review and interaction decisions](docs/ux-review.md)
+
+## Build and install
+
+The supported hardware target is **M5Stack Cardputer ADV**. The firmware uses
+ESP-IDF 5.5.1 and M5GFX 0.3.0. `tools/idf.sh` runs ESP-IDF in Docker; host tests
+require a C++17 compiler, GNU make and Python 3.
 
 ```bash
+git clone https://github.com/khurss/cardputer-groovebox.git
+cd cardputer-groovebox
 docker pull espressif/idf:v5.5.1
 make test
 python3 -m unittest discover -s tools -p 'test_*.py'
 tools/idf.sh firmware build
 ```
 
-Для устройства с принятой в этом проекте разметкой Launcher / GLIDE / Groovebox:
+For a device with this project's **Launcher / GLIDE / Groovebox partition layout**:
 
 ```bash
 python3 tools/slot.py install-app firmware/build/groovebox.bin
 ```
 
-Установщик проверяет таблицу разделов и пишет Groovebox в `0x260000`, не прошивая
-Launcher или GLIDE. Раздел кэша сэмплера — `0x3e0000`, 4 МБ. **Не используйте
-`idf.py flash` для этой разметки:** стандартная команда пишет загрузчик и таблицу
-разделов. Если разметка другая, не обходите отказ установщика.
-SD не форматируется. Исходные WAV положите в `/groovebox/samples/`.
+The installer checks the partition table and writes Groovebox at `0x260000`,
+preserving Launcher and GLIDE. The sampler cache occupies 4 MB at `0x3e0000`.
+**Do not use `idf.py flash` with this layout:** it writes the bootloader and
+partition table. If the installer rejects another layout, do not bypass its checks.
+The SD card is not formatted. Place source WAV files in `/groovebox/samples/`.
 
-Проверки на устройстве:
+## Validation
+
+The repository includes host tests, audio renderers and automated hardware checks:
 
 ```bash
 python3 tools/device_menu_test.py
@@ -92,11 +116,13 @@ python3 tools/device_visual_test.py
 python3 tools/device_sampler_test.py
 ```
 
-Тесты используют отдельный проект, отдельную библиотеку и ограничение звука **5%**.
-После проверки возвращают обычный проект и сверяют его с резервной копией.
+Hardware checks use an isolated project and sample library with a **5% output
+ceiling**. They restore the regular project and verify its checksums and backup.
+See the [visual refresh report](docs/visual-refresh.md#validation-record) for recorded
+results and the individual guides for feature-specific checks.
 
-## Вдохновение
+## Inspiration
 
-Режим струн и legato вдохновлён [GLIDE CHARL3X](https://github.com/CHARL3X/GLIDE-Synth-Cardputer-ADV).
-Здесь собственный DSP и оформление; исходники, фирменная графика и пресеты GLIDE
-не включены. Это не порт GLIDE и не обещание идентичного звука.
+The string layout and legato interaction are inspired by
+[CHARL3X's GLIDE Synth for Cardputer ADV](https://github.com/CHARL3X/GLIDE-Synth-Cardputer-ADV).
+Groovebox uses its own DSP, visuals and presets; it is an independent implementation.

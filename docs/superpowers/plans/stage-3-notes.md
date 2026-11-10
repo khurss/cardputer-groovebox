@@ -1,32 +1,42 @@
-# Заметки для плана этапа 3
+# Notes for the stage 3 plan
 
-Итог финального ревью этапа 2.
+Historical findings from the final stage 2 review.
+See the [current documentation](../../README.md) for implemented behavior.
 
-## Обязательно на этапе 3
+## Required in stage 3
 
-- События сверх 64 за блок молча теряются. Нужно зарезервировать место для NoteOff и AllNotesOff и подобрать размер буфера под худший случай.
-- Запретить ноты с `lengthTicks = 0` при создании и загрузке; ограничить `startTick`, силу удара и значения `DrumSound` при загрузке.
-- Нагрузка 9..11 % измерена только на малом барабане. Измерить все 8 ударных вместе с голосами синта, прежде чем фиксировать число голосов.
-- Не добавлять целый `InstrumentPattern` (388 байт) в `Command`: каждая ячейка очереди копируется по значению. Нужны точечные команды нот.
-- Смена формата файла делает старые файлы `BadVersion`, а значит LOAD ERR и блокировку автосохранения. Миграция должна идти вместе с изменением формата.
-- Память: статические данные 165 КБ, спрайт ещё 65 КБ. Четыре копии `Project` занимают большую часть; копия `verified` освобождается первой.
+- Events beyond 64 per block are silently lost. Reserve space for NoteOff and
+  AllNotesOff and size the buffer for the worst case.
+- Reject `lengthTicks = 0` on creation/load; validate `startTick`, velocity and
+  `DrumSound` values when loading.
+- The measured 9–11% load covers only the snare. Measure all eight drums with synth
+  voices before fixing the voice count.
+- Do not put a full 388-byte `InstrumentPattern` in `Command`: queue entries copy
+  by value. Use individual note commands.
+- A new file version makes old files return BadVersion, causing LOAD ERR and
+  blocking autosave. Ship migration with the format change.
+- Memory: 165 KB static data plus a 65 KB sprite. Four `Project` copies consume much
+  of it; remove the `verified` copy first.
 
-## Этап 4
+## Stage 4
 
-- `running_` дублирует `playing`: окончание песни инвертирует пробел.
-- `SetScenePattern` не может выразить пустой паттерн.
-- `selectPattern` сразу меняет сцену 0, это конфликтует с запуском сцен по такту.
-- Запуск сцены из песни считает такт от начала записи; время конца записи кешируется, а длина сцены меняется на лету.
+- `running_` duplicates `playing`: song completion inverts Space behavior.
+- `SetScenePattern` cannot express an empty pattern.
+- `selectPattern` immediately changes scene 0, conflicting with bar-quantized launches.
+- Scene launch from Song counts bars from the entry start; entry end is cached
+  while scene length can change live.
 
-## Этап 5
+## Stage 5
 
-- Смена свинга или сетки во время игры может один раз удвоить или потерять удар (`sequencer.cpp`, точное совпадение тика).
-- Клавиша исключения дорожки из свинга ещё не сделана.
-- Счётчики перегрузок доступны только по USB, в спецификации нужен экранный индикатор.
-- Щелчок при быстром перезапуске звука, перелёт лимитера менее 0,4 %, плейхед не учитывает свинг, подписи остальных дорожек.
+- Changing swing/grid during playback may double or lose a hit once
+  (`sequencer.cpp`, exact tick equality).
+- The shortcut to exclude a track from swing is missing.
+- Overload counters are USB-only; the specification calls for an on-screen indicator.
+- Address clicks on rapid retrigger, limiter overshoot below 0.4%, a playhead that
+  ignores swing, and labels for the other tracks.
 
-## Этап 6 и 7
+## Stages 6 and 7
 
-- Подтвердить, что сам Launcher создаёт раздел сэмплов.
-- Отдельно проверить запись голоса поверх громкого трека.
-- Клавиша или диалог для снятия блокировки автосохранения после LOAD ERR и BACKUP.
+- Confirm that Launcher itself creates the sample partition.
+- Separately check voice recording over loud playback.
+- Add a key or dialog to release the autosave lock after LOAD ERR or BACKUP.

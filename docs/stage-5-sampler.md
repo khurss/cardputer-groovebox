@@ -1,107 +1,123 @@
-# Сэмплер: SD, микрофон, нарезка и секвенсор
+# Sampler: WAV import, microphone recording, slicing and sequencing
 
-[Новое меню](menu.md): `Opt`, стрелки и `Enter`.
+Press `Fn+6` for **Sampler**, an independent SMP track alongside the drums and four
+synths. Use `Opt` for its menu; Fn remains a modifier. Master volume `+` / `−` and
+`Ctrl` fine adjustment work here too. [Menu](menu.md) · [All guides](README.md)
 
-`Fn+6` открывает сэмплер. Это отдельная дорожка SMP: ударные и четыре синта продолжают
-работать независимо. Удержание `Fn` показывает команды и выбранные пэд, слот и паттерн.
-Общая громкость `+`/`-` и `Ctrl` для точной регулировки работают и здесь.
+## Load audio from microSD
 
-## Загрузка звука
+![Sampler WAV browser with FILES, CUT and PADS tabs](images/sampler-files.png)
 
-Положите WAV в `/groovebox/samples/` на SD. Папка создаётся автоматически. Поддерживаются
-PCM 8/16/24/32 бит и float32, моно/стерео, 8–192 кГц. Имена файлов — до 47 байт, включая
-расширение; вложенные папки не используются. MP3/AAC предварительно преобразуйте в WAV.
-Исходники остаются без изменений; воспроизводимый материал преобразуется в 32 кГц,
-16 бит, моно. Стереоканалы усредняются, частота преобразуется линейной интерполяцией.
+Put WAV files in `/groovebox/samples/` on the SD card; the folder is created
+automatically. Supported formats are PCM 8/16/24/32-bit and float32, mono/stereo,
+8–192 kHz. Filenames may contain up to 47 bytes including the extension; nested
+folders are not used. Convert MP3/AAC to WAV first.
 
-Откройте `Fn+B`: `Fn+↑/↓` выбирают файл, `[`/`]` — страницу, `Enter` открывает волну.
-Каталог читается повторно при `Fn+B`, поэтому добавленные на карту файлы появятся после
-обновления списка. Обработка идёт в фоновой задаче, интерфейс продолжает работать.
+Source files remain unchanged. Playback material is converted to 32 kHz, 16-bit
+mono: stereo channels are averaged and resampling uses linear interpolation.
 
-## Запись микрофона
+Press `Fn+B`: `Fn+↑/↓` selects a file, `[` / `]` changes page, and `Enter` opens the
+waveform. `Fn+B` refreshes the directory, so newly copied files appear after reopening
+it. Processing runs in a background task while the interface stays responsive.
 
-На экране сэмплера нажмите `Alt`. Повторный `Alt` завершает запись, закрывает WAV и
-открывает его волну. Запись возможна во время игры сцены/песни и при переходе на другие
-экраны; для завершения вернитесь в `Fn+6`. Записанный файл получает свободное имя
-`REC00001.WAV`, `REC00002.WAV` и т. д. Существующие записи не заменяются.
+## Record the microphone
 
-Во время записи видны длительность и меняющаяся амплитуда. Микрофон не направляется
-на динамик: это предотвращает обратную связь. Звук из динамика всё равно может попадать
-в физический микрофон. Волнограмма автоматически подбирает масштаб, не меняя громкость
-самого файла. До завершения записи файл имеет расширение `.WAV.part`; при ошибке записи
-он сохраняется для восстановления, а интерфейс показывает ошибку. При переполнении
-буфера запись останавливается с сообщением о частично сохранённом WAV.
+Press `Alt` in Sampler to record. Press it again to finish, close the WAV and open
+its waveform. Recording can continue while a scene/song plays and while you visit
+other screens; return with `Fn+6` to stop it. Files receive the next available name,
+such as `REC00001.WAV` or `REC00002.WAV`. Existing recordings are not overwritten.
 
-## Нарезка
+The screen shows duration and changing amplitude. The microphone is not monitored
+through the speaker, preventing a direct feedback loop, though the physical
+microphone can still pick up speaker output. Waveform display gain adjusts
+automatically without changing file volume.
 
-В режиме CUT:
+Until recording finishes, the file has a `.WAV.part` extension. On write failure it
+is kept for recovery and an error appears. A buffer overflow stops recording with
+a message about the partially saved WAV.
 
-| Клавиши | Действие |
+## Select and chop a waveform
+
+![Waveform editor with selection boundaries, cursor, chop markers and viewport bar](images/sampler-cut.png)
+
+In **CUT**:
+
+| Keys | Action |
 |---|---|
-| `Fn+←/→` | Двигать курсор по волне; окно следует за курсором |
-| `Shift+Fn+←/→` | Двигать курсор на один аудиосэмпл |
-| `Fn+↑/↓` | Приблизить/отдалить область вокруг курсора |
-| `A` | Начало выделения под курсором |
-| `D` | Конец выделения под курсором |
-| `R` | Выделить весь исходник и сбросить масштаб |
-| `Enter` | Сохранить выделение в свободный слот и назначить выбранному пэду |
-| `Fn+A` | Число равных частей: 4 → 8 → 16 → 32 |
-| `Fn+Enter` | Сохранить выделение как выбранное число равных нарезок |
-| `1..8` | Выбрать пэд и прослушать назначенную нарезку |
-| `Fn+-` / `Fn++` | Назначить выбранному пэду соседний слот S01..S32 |
-| `Fn+D` | Удалить нарезку выбранного пэда из библиотеки; исходный WAV остаётся |
+| Fn+←/→ | Move the waveform cursor; the viewport follows |
+| Shift+Fn+←/→ | Move by one audio frame |
+| Fn+↑/↓ | Zoom in/out around the cursor |
+| A | Set selection start at the cursor |
+| D | Set selection end at the cursor |
+| R | Select the full source and reset zoom |
+| Enter | Save the selection to a free slot and assign it to the selected pad |
+| Fn+A | Cycle equal-chop count: 4 → 8 → 16 → 32 |
+| Fn+Enter | Save the selection as that many equal slices |
+| 1..8 | Select a pad and audition its slice |
+| Fn+−/+ | Assign the previous/next slot S01..S32 to the pad |
+| Fn+D | Immediately delete the selected pad's sample slot; keep the source WAV |
 
-Синие линии показывают сохранённые границы и выделение, жёлтая — курсор, короткие
-оранжевые отметки — предполагаемую равную нарезку. Координаты A/B внизу указаны в
-миллисекундах. Сохранение всегда использует свободные слоты, существующие нарезки
-не перезаписываются. При автоматической нарезке первые восемь частей назначаются
-пэдам 1..8 текущего паттерна. Остальные доступны через назначение слотов.
+Selection bounds, the cursor and proposed chop positions are marked over the
+waveform. A/B positions below it are in milliseconds; the bottom overview shows the
+visible portion of the whole source. Saving always uses free slots and never
+overwrites existing slices. Equal chopping assigns the first eight pieces to pads
+1..8 of the current pattern; assign other slots manually to use the remaining pieces.
 
-Подготовка и удаление нарезок требуют остановленного транспорта: запись flash не
-выполняется во время воспроизведения. На время этой операции запуск блокируется.
-При ошибке чтения/нехватке места новые назначения не применяются. Исходные WAV
-не удаляются. Библиотека и назначения сохраняются на SD вместе с проектом.
+Preparing or deleting slices requires stopped transport, because flash writes do
+not run during playback. Starting playback is blocked during that operation. A read
+failure or insufficient space leaves new assignments unapplied. Source WAV files
+are never deleted by slice operations. The library and assignments save with the
+project. For confirmed deletion, use **ACTIONS → Delete sample slot** instead of
+`Fn+D`.
 
-## Паттерны и песня
+## Sequence pads and arrange a song
 
-`Fn+P` переключает CUT / SEQ. В SEQ:
+![Sampler pad sequencer with slot assignments, steps and source filename](images/sampler-pads.png)
 
-- `1..8` выбирают пэд и прослушивают звук.
-- `qwertyui` / `asdfghjk` включают шаги 1..16; `Shift` задаёт акцент.
-- `Fn+[` / `Fn+]` выбирают паттерн P01..P16.
-- `Fn+-` / `Fn++` назначают слот выбранному пэду.
-- `Fn+L` меняет длину, `Fn+G` — сетку.
-- `Fn+C` / `Fn+V` копируют/вставляют паттерн вместе с назначениями пэдов.
-- `Fn+Backspace` очищает шаги, сохраняя длину, сетку и назначения; `Fn+Z` отменяет правку.
-- `Space` запускает/останавливает сцену.
+`Fn+P` switches between **CUT** and **PADS** (the pad sequencer). In PADS:
 
-Каждый паттерн хранит собственные восемь назначений: в одной песне можно использовать
-все 32 слота, а не только восемь выбранных в данный момент. Редактируемый паттерн
-назначается дорожке SMP выбранной сцены. На экране сцен столбец SMP выбирается
-`Fn+→` или клавишей `6`, затем `Fn++`/`Fn+-` задают паттерн, как на других дорожках.
-В микшере полоска SMP имеет отдельные уровень, mute и solo. Сцены с сэмплами входят
-в обычную цепочку песни. Доступны четыре одновременно звучащие сэмплерные ноты;
-при превышении освобождается самая старая. Начало и конец имеют короткий fade.
-Пока звучат сэмплы, синт использует четыре голоса, сохраняя запас аудиоядра;
-без звучащих сэмплов доступно пять. При уменьшении бюджета убирается самый тихий
-синт-голос с коротким затуханием. Текущий бюджет подписан как SYN4/SYN5 в панели Fn.
+- `1..8` selects and auditions a pad.
+- `qwertyui` / `asdfghjk` toggles steps 1..16; hold `Shift` for an accent.
+- `Fn+[` / `Fn+]` selects P01..P16.
+- `Fn+−/+` assigns a slot to the selected pad.
+- `Fn+L` changes length; `Fn+G` changes grid.
+- `Fn+C` / `Fn+V` copies/pastes a pattern, including pad assignments.
+- `Fn+Backspace` clears steps while preserving length, grid and assignments;
+  `Fn+Z` undoes the edit.
+- `Space` starts/stops the scene.
 
-## Память, формат и проверки
+Each pattern stores its own eight pad assignments, so a song can use all 32 slots.
+Editing or explicitly selecting a pattern assigns it to SMP in the selected scene.
+In Scenes, choose SMP with `Fn+→` or `6`, then use `Fn+−/+` to assign its pattern.
+The Mixer has a separate SMP level, mute and solo. Sample scenes fit into the normal
+[song arrangement](stage-4.md).
 
-Воспроизведение читает подготовленный PCM из отдельного раздела flash `samples`:
-`0x3e0000..0x7e0000`, 4 МБ. Это около 65,4 секунды суммарного звука всех сохранённых
-нарезок, включая перекрытия. Длинный исходник может лежать на SD целиком: сохраняйте
-нужные фрагменты, а не весь многоминутный файл. При заполнении удалите ненужные
-нарезки через `Fn+D`. Кэш проверяется по метаданным проекта/исходников и контрольным
-суммам. При несовпадении он восстанавливается из WAV. Заголовок фиксируется после PCM,
-поэтому прерванная подготовка не превращается в готовую библиотеку.
+Four sample voices can sound simultaneously; excess notes steal the oldest voice.
+Short fades smooth their beginnings and ends. While samples sound, the synth budget
+is four voices; otherwise it is five. A reduced budget removes the quietest synth
+voice with a short fade to retain audio processing headroom.
 
-Проект v4 хранит библиотеку, назначения, SMP-паттерны и шестую дорожку сцен/микшера.
-Проекты v1/v2/v3 читаются с пустой сэмплерной дорожкой. Автосохранение выполняется
-на остановленном транспорте после трёх секунд без правок; во время записи микрофона
-и файловых операций сохранение проекта откладывается. В аудиозадаче нет файловых
-операций и выделений памяти. 16-КБ очередь микрофона отделяет аудио от записи на SD;
-счётчик потерь и сообщения об ошибках доступны через USB.
+## Storage and project format
+
+Playback reads prepared PCM from the dedicated 4 MB `samples` flash partition at
+`0x3e0000..0x7e0000`. It holds about **65.4 seconds total** across saved slices,
+including overlapping material. A long source can remain on SD: save the fragments
+you need rather than an entire multi-minute file. Delete unused slots to free space.
+
+The cache is checked against project/source metadata and checksums, then rebuilt
+from WAV files if needed. Its header is committed after the PCM, so an interrupted
+preparation is not treated as a finished library.
+
+Sampler data was introduced in GBP v4; current saves use v5 and load v1–v5.
+Older v1/v2/v3 projects start with an empty sampler track. Autosave runs after three
+idle seconds while stopped; microphone recording and file operations defer it.
+The audio task performs no file I/O or memory allocation. A 16 KB microphone queue
+separates audio capture from SD writes; USB exposes drop counters and errors.
+
+Keep source WAV files with your [project backups](projects.md), because `.gbp`
+files store references and slice bounds rather than embedded audio.
+
+## Developer checks
 
 ```bash
 make test
@@ -112,32 +128,34 @@ python3 tools/device_sampler_test.py
 python3 tools/device_sampler_test.py --stress
 ```
 
-Установка добавляет раздел сэмплов за существующим слотом приложения, сохраняя
-Launcher, GLIDE и прочие разделы. Обычный `idf.py flash` для этого устройства
-не используется. Установщик отказывается перекрывать занятые разделы.
+Installation adds the sample partition after the existing application slot while
+preserving Launcher, GLIDE and other partitions. Do not use ordinary `idf.py flash`
+for this layout. The installer rejects overlaps; see
+[build and installation requirements](../README.md#build-and-install).
 
-Проверки используют отдельный проект и `/groovebox/test-samples/`, громкость 5 %
-и независимый потолок выхода 5 %. Команда `J` показывает библиотеку, назначения,
-состояние микрофона и кэша. `W begin/data/end` загружает тестовый WAV только в
-изолированном режиме; произвольные пути не принимаются.
+Checks use an isolated project and `/groovebox/test-samples/`, master at 5% and an
+independent 5% output ceiling. USB command `J` shows the library, assignments,
+microphone and cache status. `W begin/data/end` uploads test WAVs only in isolated
+mode; arbitrary paths are rejected.
 
+## Stage 5 validation record
 
-Аппаратные результаты: 194 C++ проверки с ASan/UBSan и 55 Python проверок прошли.
-На устройстве подтверждены преобразование стерео WAV 16 кГц, границы, нарезка,
-пэды, отдельный SMP-микшер, сохранение и удаление после перезагрузки. Запись микрофона
-проверяется по ненулевому сигналу ADC и воспроизведению записанного PCM.
+At the sampler implementation stage, 194 C++ checks with ASan/UBSan and 55 Python
+checks passed. Device checks covered 16 kHz stereo WAV conversion, boundaries,
+chopping, pads, the SMP mixer, persistence and deletion after reboot. Microphone
+recording was checked through nonzero ADC input and playback of recorded PCM.
 
-Минутный тест при 240 BPM: плотные синты с бюджетом 4 голоса, все восемь ударных,
-четыре сэмплерных голоса и запись микрофона на SD. Максимальная нагрузка рендера —
-41,3 %, новых переполнений I2S/событий и потерь записи нет. Свободная куча —
-68 144 байта; запас стеков: audio 7028, UI 4208 байт. Горячие функции DSP выполняются
-из IRAM, таблица синуса находится в DRAM. RGB332-буфер экрана экономит 32 400 байт
-по сравнению с RGB565; цвета фона/шагов различимы в этой палитре. Инициализация
-кодека ждёт окончания reset и повторяет неуспешную запись регистра.
+A one-minute 240 BPM stress test combined dense four-voice synths, all eight drums,
+four sample voices and microphone recording to SD. Peak rendering load was 41.3%,
+with no new I2S/event overflows or recording drops. Free heap was 68,144 bytes;
+stack margins were 7,028 bytes for audio and 4,208 for UI. Hot DSP functions ran
+from IRAM and the sine table from DRAM. RGB332 display buffering saved 32,400 bytes
+versus RGB565. Codec initialization waited for reset completion and retried failed
+register writes.
 
-Все звуковые проверки ограничены 5 % на выходе. Обычный проект и backup остаются
-без изменений; исходные WAV сохраняются.
-
-Регрессия синтов также прошла: живая игра, запись/редактирование, перезапуск,
-миграция v1 и плотные паттерны при 40/240 BPM (по 15 секунд). Без сэмплов
-используются все пять голосов; при 240 BPM максимум 43,2 %, новых ошибок I2S нет.
+Synth regression checks also passed: live playing, recording/editing, restart,
+v1 migration and dense patterns at 40/240 BPM for 15 seconds each. Without samples,
+all five synth voices were available; the 240 BPM peak was 43.2%, with no new I2S
+errors. These are measurements of those scenarios, not limits for every song.
+All audio checks used the 5% ceiling and left the regular project, backup and source
+WAVs unchanged. See the [later visual refresh results](visual-refresh.md#validation-record).

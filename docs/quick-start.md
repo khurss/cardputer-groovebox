@@ -1,59 +1,86 @@
-# Первый трек за несколько минут
+# Quick start: make your first track
 
-Эта же последовательность доступна на устройстве: **Opt → SCREENS → Quick start**.
-Enter / Tab — следующая страница, Fn+← — предыдущая, Opt — закрыть.
+The same walkthrough is available on the device at **Opt → SCREENS → Quick start**.
+Press `Enter` or `Tab` for the next page, `Fn+←` for the previous page, and `Esc` or
+`Opt` to close it. [Keyboard reference](controls.md) · [All guides](README.md)
 
-## 1. Подготовьте проект
+![Welcome page of the built-in quick start tutorial](images/quick-start.png)
 
-Вставьте microSD и откройте Projects из меню. Выберите New project, введите имя
-и нажмите Enter. Устройство сохранит прежнюю работу и перезапустится с пустым проектом.
-Убавьте громкость `−`; `+` прибавляет её шагами по 5%.
+## 1. Create a project
 
-## 2. Сделайте бит
+Insert a microSD card and open **Opt → SCREENS → Projects**. Select **New project**,
+type a name and press `Enter`. The device saves your previous work and restarts
+with an empty project. Use `−` to lower the volume; `+` raises it in 5% steps.
+Close Projects before using the volume keys.
 
-`Fn+1` — Drums. Выберите kick клавишей `1` и нажмите `Q`, `T`, `A`, `G`
-(шаги 1, 5, 9, 13). Выберите snare клавишей `2`, включите `T` и `G`.
-`Space` запускает цикл. Повторное нажатие шага выключает его; Shift даёт акцент.
+![Project manager with save, new, copy and demo actions](images/projects.png)
 
-## 3. Добавьте мелодию
+## 2. Make a beat
 
-`Fn+2`, затем **Opt → ACTIONS → Performance**. Теперь строки клавиатуры играют
-как четыре струны. Нажмите Z и, удерживая её, X: звук плавно поднимется;
-отпустите X — вернётся к Z. Несколько строк дают аккорд.
+Press `Fn+1` for **Drums**. Choose the kick with `1` and press `Q`, `T`, `A`, `G`
+(steps 1, 5, 9, 13). Choose the snare with `2` and enable `T` and `G`.
+Press `Space` to loop the beat. Press an enabled step again to turn it off;
+use `Shift` with a step key for an accent.
 
-В **SETTINGS** выберите Sound preset, Keyboard layout, Root note и Scale.
-Strings ограничивает ноты выбранной гаммой. Для обычных клавиш выбирайте Piano.
+![Drum sequencer with eight sound lanes and a sixteen-step grid](images/drums.png)
 
-Нажмите `Alt`, сыграйте партию поверх цикла, ещё раз `Alt` — закончить запись.
-Перейдите **ACTIONS → Piano roll**: ноты видны сразу, диапазон подстраивается.
-`Fn+стрелки` двигают курсор, Enter добавляет/выбирает ноту, Backspace удаляет.
-Undo в меню отменяет весь последний проход записи.
+## 3. Add a melody
 
-## 4. Сделайте вариацию
+Press `Fn+2`, then **Opt → ACTIONS → Performance**. The keyboard rows now play as
+four strings. Hold `Z` and press `X`: the pitch slides upward. Release `X` to return
+to `Z`. Play across rows for a chord.
 
-Остановите `Space`. **ACTIONS → Copy pattern**, выберите другой Pattern в SETTINGS,
-затем **ACTIONS → Paste pattern**. Измените несколько нот. Сделайте подобную
-вариацию ударных. Копирование не изменяет исходный паттерн.
+![Synth Performance with colored pitch trails and a small keyboard map](images/performance.png)
 
-## 5. Соберите сцены и песню
+In **SETTINGS**, choose **Sound preset**, **Keyboard layout**, **Root note** and
+**Scale**. Strings follows the selected scale; choose Piano for a chromatic layout.
 
-`Fn+3` — Scenes. Выберите сцену и назначьте нужные паттерны для DRUM, T1..T4 и SMP
-через SETTINGS. Пустая ячейка исключает дорожку. Enter запускает выбранную сцену.
+With the loop playing, press `Alt`, play your part, then press `Alt` again to finish
+recording. Open **ACTIONS → Piano roll**: notes appear immediately and the visible
+pitch range follows your part. `Fn+arrows` moves the cursor, `Enter` adds or selects
+a note, and `Backspace` deletes a selected note. **Undo** reverses the last recording
+pass as a single action.
 
-`Fn+4` — Song. В SETTINGS выберите Insert scene, затем в ACTIONS — Insert scene.
-Повторите для следующих частей. Repeats задаёт длительность части.
-Enter играет песню с выбранной строки; Space останавливает.
+![Piano roll showing recorded notes, pitch rows and velocity markings](images/piano-roll.png)
 
-## 6. Сведите и сохраните
+## 4. Make a variation
 
-`Fn+5` — Mixer. Выберите Channel и Channel level в SETTINGS; Mute/Solo — в ACTIONS.
-Громкость MAIN всегда доступна через `+ / −`.
-Остановите транспорт, **Opt → SCREENS → Projects → Save current**.
+Stop with `Space`. Choose **ACTIONS → Copy pattern**, select another **Pattern** in
+**SETTINGS**, then choose **ACTIONS → Paste pattern**. Change a few notes. Do the
+same for the drums. Copying leaves the original pattern intact.
 
-## 7. Добавьте сэмплы
+## 5. Arrange scenes and a song
 
-Скопируйте WAV в `/groovebox/samples/` на карте. `Fn+6`, затем
-**ACTIONS → Browse WAV files**. Или используйте Record microphone; тот же пункт
-меняется на Stop microphone во время записи.
-В Waveform editor выберите начало клавишей A, конец D, Enter сохраняет нарезку.
-Pad sequencer позволяет поставить её на шаги. Подробнее: [сэмплер](stage-5-sampler.md).
+Press `Fn+3` for **Scenes**. Select a scene and assign patterns to DRUM, T1..T4 and
+SMP in **SETTINGS**. An empty cell leaves that track out. `Enter` launches the scene.
+
+![Scenes grid combining drum, synth and sampler patterns](images/scenes.png)
+
+Press `Fn+4` for **Song**. Select **Insert scene** in **SETTINGS**, then execute
+**Insert scene** in **ACTIONS**. Repeat for the next sections. **Repeats** sets the
+length of each section. `Enter` plays from the selected row; `Space` stops.
+
+![Song arrangement with scene numbers and repeat counts](images/song.png)
+
+## 6. Mix and save
+
+Press `Fn+5` for **Mixer**. Choose **Channel** and **Channel level** in **SETTINGS**;
+use **Mute/Solo** in **ACTIONS**. `+` / `−` controls MAIN in workspaces and the normal
+menu. Stop playback, then open **Opt → SCREENS → Projects → Save current**.
+
+![Mixer with master and six track faders](images/mixer.png)
+
+## 7. Add samples
+
+Copy WAV files to `/groovebox/samples/` on the card. Press `Fn+6`, then
+**ACTIONS → Browse WAV files**. Alternatively, choose **Record microphone**; the
+same action becomes **Stop microphone** during recording.
+
+In **Waveform editor**, move the cursor and mark the start with `A` and the end
+with `D`. Stop transport, then press `Enter` to save the slice. **Pad sequencer**
+places it on steps. See the [sampler guide](stage-5-sampler.md) for chopping and assignments.
+
+![Sampler waveform with a selection and equal-chop markers](images/sampler-cut.png)
+
+To explore a finished arrangement, install an [original demo song](../examples/README.md)
+from **Projects → Add demo songs**, load it, then press `Fn+4` and `Enter`.

@@ -1,29 +1,31 @@
-# Groovebox: этап 2, драм-машина. План реализации
+# Groovebox stage 2: drum machine implementation plan
+
+> **Historical implementation plan.** Code samples and instructions describe the original stage, not the current firmware. Use the [current guides](../../README.md) for controls, installation and the 5% audio-test ceiling.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** рабочая драм-машина на Cardputer ADV: синтез 8 ударных, экран с сеткой, запуск, смена сетки и свинга, сохранение на SD.
+**Goal:** a working Cardputer ADV drum machine: eight synthesized sounds, a grid screen, transport, grid/swing changes and SD saving.
 
-**Architecture:** логика остаётся в `gb_core` без зависимостей от железа и тестируется на ПК: команды, сохранение, синтез, движок, экран. Прошивка `firmware/` только связывает ядро с кодеком, клавиатурой, дисплеем и картой. Аудиозадача владеет своей копией проекта, интерфейс меняет свою и шлёт те же команды через очередь без блокировок.
+**Architecture:** hardware-independent logic remains in host-tested `gb_core`: commands, persistence, synthesis, engine and screen. `firmware/` connects it to codec, keyboard, display and card. Audio owns its project copy; UI edits its own and sends matching commands through a lock-free queue.
 
-**Tech Stack:** ESP-IDF v5.5.1 в Docker (образ `cbc2e2ec2afe`), M5GFX 0.3.0, C++17, g++ и make на ПК, Python 3 (только стандартная библиотека).
+**Tech Stack:** ESP-IDF v5.5.1 in Docker (original image `cbc2e2ec2afe`), M5GFX 0.3.0, C++17, host g++/make and Python 3 standard library. For current setup, use the root README.
 
-**Spec:** `docs/superpowers/specs/2026-11-09-groovebox-design.md`. **Заметки ревью:** `docs/superpowers/plans/stage-2-notes.md`.
+**Spec:** `docs/superpowers/specs/2026-11-09-groovebox-design.md`. **Review notes:** `docs/superpowers/plans/stage-2-notes.md`.
 
 ## Global Constraints
 
-- Код, звуки и название GLIDE не используются.
-- Launcher (0x10000) и GLIDE (0x170000) не перезаписываются. `idf.py flash` запрещён.
-- Карта microSD никогда не форматируется программой.
-- Проверки на устройстве идут без участия человека: установка по кабелю, измерение микрофоном, результат по USB.
-- Звук 32 кГц, 16 бит, блок 256 кадров. Аудиозадача не выделяет память.
-- Время 96 тиков на четверть. Сетки 1/4, 1/8, 1/16, 1/32, 1/8T, 1/16T. Длина паттерна 4, 8 или 16. Темп 40..240. Свинг 50..75.
-- Выводы: I2C SDA 8, SCL 9, ES8311 0x18, TCA8418 0x34; I2S BCK 41, WS 43, DOUT 42, DIN 46; SD SCK 40, MOSI 14, MISO 39, CS 12.
-- Слот приложения: 0x260000, размер 0x180000, метка `groovebox`.
+- Do not use GLIDE code, sounds or branding.
+- Do not overwrite Launcher (0x10000) or GLIDE (0x170000). Never use `idf.py flash`.
+- The application must never format the microSD card.
+- Device checks are unattended: cable installation, microphone measurement and results over USB.
+- Audio: 32 kHz, 16-bit, 256-frame blocks. No allocation in the audio task.
+- Timing: 96 ticks per quarter. Grids 1/4, 1/8, 1/16, 1/32, 1/8T, 1/16T. Pattern lengths 4/8/16. Tempo 40–240. Swing 50–75.
+- Pins: I2C SDA 8, SCL 9, ES8311 0x18, TCA8418 0x34; I2S BCK 41, WS 43, DOUT 42, DIN 46; SD SCK 40, MOSI 14, MISO 39, CS 12.
+- Application slot: 0x260000, size 0x180000, label `groovebox`.
 
 ---
 
-### Task 1: Звуки, проверка проекта, смена сетки
+### Task 1: Sounds, project validation and grid changes
 
 **Files:**
 - Modify: `components/gb_core/include/gb/model.h`
@@ -33,7 +35,7 @@
 **Interfaces:**
 - Produces: `gb::DrumSound { uint8_t tune, decay, tone, level; }`, `Project::sounds[8]`, `bool gb::isValidProject(const Project&)`, `void gb::changeDrumGrid(DrumPattern&, Grid)`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tests/test_validate.cpp -->
 ```cpp
@@ -152,12 +154,12 @@ TEST(stepsPastTheGridAreDropped) {
 }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/validate.h: No such file or directory`.
+Expected: compilation error, `gb/validate.h: No such file or directory`.
 
-- [ ] **Step 3: Добавить звуки в модель**
+- [ ] **Step 3: Add sounds to the model**
 
 <!-- insert-before: components/gb_core/include/gb/model.h | struct Project { -->
 ```cpp
@@ -175,7 +177,7 @@ struct DrumSound {
     DrumSound sounds[kDrumLanes];
 ```
 
-- [ ] **Step 4: Реализовать проверку и смену сетки**
+- [ ] **Step 4: Implement validation and grid conversion**
 
 <!-- file: components/gb_core/include/gb/validate.h -->
 ```cpp
@@ -255,12 +257,12 @@ void changeDrumGrid(DrumPattern& pattern, Grid grid) {
 }  // namespace gb
 ```
 
-- [ ] **Step 5: Убедиться, что тесты проходят**
+- [ ] **Step 5: Verify tests pass**
 
 Run: `make test`
 Expected: `37 tests, 0 failures`
 
-- [ ] **Step 6: Коммит**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add components tests
@@ -269,17 +271,17 @@ git commit -m "feat: add drum sounds, project validation and grid remapping"
 
 ---
 
-### Task 2: Команды и очередь
+### Task 2: Commands and queue
 
 **Files:**
 - Create: `components/gb_core/include/gb/spsc.h`, `components/gb_core/include/gb/commands.h`, `components/gb_core/src/commands.cpp`
 - Test: `tests/test_commands.cpp`
 
 **Interfaces:**
-- Consumes: `changeDrumGrid` (Задача 1).
-- Produces: `gb::SpscQueue<T, N>` с `push`/`pop`; `gb::Command`, `gb::CommandType`, `gb::SoundParam`, `void gb::applyEdit(Project&, const Command&)`, `void gb::initProject(Project&)`.
+- Consumes: `changeDrumGrid` (Task 1).
+- Produces: `gb::SpscQueue<T, N>` with `push`/`pop`; `gb::Command`, `gb::CommandType`, `gb::SoundParam`, `void gb::applyEdit(Project&, const Command&)`, `void gb::initProject(Project&)`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tests/test_commands.cpp -->
 ```cpp
@@ -386,12 +388,12 @@ TEST(queueKeepsOrderAndReportsFull) {
 }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/commands.h: No such file or directory`.
+Expected: compilation error, `gb/commands.h: No such file or directory`.
 
-- [ ] **Step 3: Реализовать команды и очередь**
+- [ ] **Step 3: Implement commands and queue**
 
 <!-- file: components/gb_core/include/gb/spsc.h -->
 ```cpp
@@ -530,12 +532,12 @@ void applyEdit(Project& project, const Command& command) {
 }  // namespace gb
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [ ] **Step 4: Verify tests pass**
 
 Run: `make test`
 Expected: `47 tests, 0 failures`
 
-- [ ] **Step 5: Коммит**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add components tests
@@ -544,17 +546,17 @@ git commit -m "feat: add edit commands and lock-free queue"
 
 ---
 
-### Task 3: Сохранение проекта
+### Task 3: Project persistence
 
 **Files:**
 - Create: `components/gb_core/include/gb/project_io.h`, `components/gb_core/src/project_io.cpp`
 - Test: `tests/test_project_io.cpp`
 
 **Interfaces:**
-- Consumes: `isValidProject` (Задача 1).
+- Consumes: `isValidProject` (Task 1).
 - Produces: `gb::kProjectBufferSize`, `size_t gb::serializeProject(const Project&, uint8_t*, size_t)`, `gb::LoadResult`, `LoadResult gb::deserializeProject(const uint8_t*, size_t, Project&)`, `bool gb::saveProjectFile(const char* path, const Project&, uint8_t* buffer, size_t capacity)`, `LoadResult gb::loadProjectFile(const char* path, Project&, uint8_t* buffer, size_t capacity)`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tests/test_project_io.cpp -->
 ```cpp
@@ -707,12 +709,12 @@ TEST(missingFileIsReported) {
 }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/project_io.h: No such file or directory`.
+Expected: compilation error, `gb/project_io.h: No such file or directory`.
 
-- [ ] **Step 3: Реализовать сохранение**
+- [ ] **Step 3: Implement saving**
 
 <!-- file: components/gb_core/include/gb/project_io.h -->
 ```cpp
@@ -962,12 +964,12 @@ LoadResult loadProjectFile(const char* path, Project& out, uint8_t* buffer, size
 }  // namespace gb
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [ ] **Step 4: Verify tests pass**
 
 Run: `make test`
 Expected: `59 tests, 0 failures`
 
-- [ ] **Step 5: Коммит**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add components tests
@@ -976,7 +978,7 @@ git commit -m "feat: add versioned project files with backup"
 
 ---
 
-### Task 4: Синтез ударных
+### Task 4: Drum synthesis
 
 **Files:**
 - Create: `components/gb_core/include/gb/drums.h`, `components/gb_core/src/drums.cpp`, `tools/render_drums.cpp`
@@ -984,10 +986,10 @@ git commit -m "feat: add versioned project files with backup"
 - Test: `tests/test_drums.cpp`
 
 **Interfaces:**
-- Consumes: `DrumSound` (Задача 1).
+- Consumes: `DrumSound` (Task 1).
 - Produces: `gb::DrumRack(uint32_t sampleRate)`, `void trigger(uint8_t lane, uint8_t velocity, const DrumSound&)`, `float render()`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tests/test_drums.cpp -->
 ```cpp
@@ -1122,12 +1124,12 @@ TEST(outOfRangeLaneIsIgnored) {
 }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/drums.h: No such file or directory`.
+Expected: compilation error, `gb/drums.h: No such file or directory`.
 
-- [ ] **Step 3: Реализовать синтез**
+- [ ] **Step 3: Implement synthesis**
 
 <!-- file: components/gb_core/include/gb/drums.h -->
 ```cpp
@@ -1279,12 +1281,12 @@ float DrumRack::render() {
 
 Note on `highpass`: the output is `raw - lowState`, so a larger coefficient removes more low frequencies and sounds brighter.
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [ ] **Step 4: Verify tests pass**
 
 Run: `make test`
 Expected: `72 tests, 0 failures`
 
-- [ ] **Step 5: Добавить рендер в WAV для прослушивания на компьютере**
+- [ ] **Step 5: Add WAV rendering for desktop listening**
 
 <!-- file: tools/render_drums.cpp -->
 ```cpp
@@ -1343,7 +1345,7 @@ int main(int argc, char** argv) {
 }
 ```
 
-Заменить `Makefile` целиком:
+Replace the entire `Makefile`:
 
 <!-- file: Makefile -->
 ```make
@@ -1373,9 +1375,9 @@ clean:
 ```
 
 Run: `make render && ls -l build/drums.wav`
-Expected: файл около 256 КБ.
+Expected: a file of about 256 KB.
 
-- [ ] **Step 6: Коммит**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add Makefile components tests tools
@@ -1384,7 +1386,7 @@ git commit -m "feat: add eight synthesized drum voices"
 
 ---
 
-### Task 5: Движок
+### Task 5: Engine
 
 **Files:**
 - Modify: `components/gb_core/include/gb/sequencer.h`
@@ -1395,7 +1397,7 @@ git commit -m "feat: add eight synthesized drum voices"
 - Consumes: `Sequencer` (`render`, `playScene`, `stop`, `playing`), `DrumRack`, `applyEdit`, `Command`.
 - Produces: `gb::Engine(Project&, uint32_t rate)`, `void handle(const Command&)`, `void render(int16_t* stereo, uint32_t frames)`, `uint32_t sceneTick() const`, `bool playing() const`; `Sequencer::sceneTick()`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tests/test_engine.cpp -->
 ```cpp
@@ -1536,14 +1538,14 @@ TEST(sceneTickAdvancesWhilePlaying) {
 }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/engine.h: No such file or directory`.
+Expected: compilation error, `gb/engine.h: No such file or directory`.
 
-- [ ] **Step 3: Реализовать движок**
+- [ ] **Step 3: Implement the engine**
 
-Добавить в `Sequencer` доступ к позиции:
+Expose the position in `Sequencer`:
 
 <!-- insert-before: components/gb_core/include/gb/sequencer.h |     // Returns the number of events written to `out`. -->
 ```cpp
@@ -1657,12 +1659,12 @@ void Engine::render(int16_t* stereo, uint32_t frames) {
 }  // namespace gb
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [ ] **Step 4: Verify tests pass**
 
 Run: `make test`
 Expected: `80 tests, 0 failures`
 
-- [ ] **Step 5: Коммит**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add components tests
@@ -1671,17 +1673,17 @@ git commit -m "feat: add audio engine with sample-accurate drum triggers"
 
 ---
 
-### Task 6: Экран ударных
+### Task 6: Drum screen
 
 **Files:**
 - Create: `components/gb_core/include/gb/drum_ui.h`, `components/gb_core/src/drum_ui.cpp`
 - Test: `tests/test_drum_ui.cpp`
 
 **Interfaces:**
-- Consumes: `Command`, `applyEdit`, модель.
-- Produces: `gb::Canvas` (абстрактный), коды клавиш `gb::key::Fn, Shift, Tab`, `gb::DrumUi(Project&, CommandSink, void* context)` с `onKey(char, bool)`, `clearPattern()`, `draw(Canvas&, uint32_t sceneTick, bool playing, bool storageAvailable)`, `takeSaveRequest()`, `takeDirty()`, `selectedLane()`, `currentPattern()`.
+- Consumes: `Command`, `applyEdit`, model.
+- Produces: abstract `gb::Canvas`, keycodes `gb::key::Fn, Shift, Tab`, `gb::DrumUi(Project&, CommandSink, void* context)` with `onKey(char, bool)`, `clearPattern()`, `draw(Canvas&, uint32_t sceneTick, bool playing, bool storageAvailable)`, `takeSaveRequest()`, `takeDirty()`, `selectedLane()`, `currentPattern()`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tests/test_drum_ui.cpp -->
 ```cpp
@@ -1977,12 +1979,12 @@ TEST(dirtyFlagFollowsEdits) {
 }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/drum_ui.h: No such file or directory`.
+Expected: compilation error, `gb/drum_ui.h: No such file or directory`.
 
-- [ ] **Step 3: Реализовать экран**
+- [ ] **Step 3: Implement the screen**
 
 <!-- file: components/gb_core/include/gb/drum_ui.h -->
 ```cpp
@@ -2358,12 +2360,12 @@ void DrumUi::draw(Canvas& canvas, uint32_t sceneTick, bool playing, bool storage
 }  // namespace gb
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [ ] **Step 4: Verify tests pass**
 
 Run: `make test`
 Expected: `101 tests, 0 failures`
 
-- [ ] **Step 5: Коммит**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add components tests
@@ -2372,24 +2374,24 @@ git commit -m "feat: add drum screen logic and drawing"
 
 ---
 
-### Task 7: Прошивка
+### Task 7: Firmware
 
 **Files:**
 - Modify: `.gitignore`, `tools/slot.py`, `tools/test_slot.py`
 - Create: `components/gb_core/CMakeLists.txt`, `firmware/CMakeLists.txt`, `firmware/sdkconfig.defaults`, `firmware/partitions.csv`, `firmware/main/CMakeLists.txt`, `firmware/main/idf_component.yml`, `firmware/main/hardware.h`, `firmware/main/hardware.cpp`, `firmware/main/main.cpp`
 
 **Interfaces:**
-- Consumes: всё из `gb_core`.
-- Produces: `firmware/build/groovebox.bin`; `tools/slot.py install-app <bin> | remove-app`; консоль USB с командами `K <мод> <клавиша>`, `S`, `L <мс>`, `C`, `X`, `F`.
+- Consumes: everything in `gb_core`.
+- Produces: `firmware/build/groovebox.bin`; `tools/slot.py install-app <bin> | remove-app`; USB console commands `K <modifiers> <key>`, `S`, `L <ms>`, `C`, `X`, `F`.
 
-- [ ] **Step 1: Дополнить `.gitignore`**
+- [ ] **Step 1: Extend `.gitignore`**
 
 <!-- insert-before: .gitignore | .tmp/ -->
 ```gitignore
 firmware/components/fatfs/
 ```
 
-- [ ] **Step 2: Написать падающие тесты установщика**
+- [ ] **Step 2: Write failing installer tests**
 
 <!-- insert-before: tools/test_slot.py | if __name__ == "__main__": -->
 ```python
@@ -2430,7 +2432,7 @@ If `tempfile` is not yet imported in `tools/test_slot.py`, add `import tempfile`
 Run: `python3 tools/test_slot.py`
 Expected: FAIL, `AttributeError: module 'slot' has no attribute 'add_app'`.
 
-- [ ] **Step 3: Добавить слот приложения в `slot.py`**
+- [ ] **Step 3: Add the application slot to `slot.py`**
 
 Add next to the other constants:
 
@@ -2481,7 +2483,7 @@ In `main`, add two branches in the existing command dispatch:
 Run: `python3 tools/test_slot.py`
 Expected: `OK`
 
-- [ ] **Step 4: Создать конфигурацию сборки**
+- [ ] **Step 4: Create the build configuration**
 
 <!-- file: components/gb_core/CMakeLists.txt -->
 ```cmake
@@ -2536,7 +2538,7 @@ dependencies:
   m5stack/m5gfx: "0.3.0"
 ```
 
-- [ ] **Step 5: Написать слой железа**
+- [ ] **Step 5: Write the hardware layer**
 
 <!-- file: firmware/main/hardware.h -->
 ```cpp
@@ -2775,7 +2777,7 @@ int cardFilesystem() {
 }  // namespace hw
 ```
 
-- [ ] **Step 6: Написать приложение**
+- [ ] **Step 6: Write the application**
 
 <!-- file: firmware/main/main.cpp -->
 ```cpp
@@ -3001,12 +3003,12 @@ extern "C" void app_main() {
 }
 ```
 
-- [ ] **Step 7: Собрать**
+- [ ] **Step 7: Build**
 
 Run: `tools/idf.sh firmware set-target esp32s3 && tools/idf.sh firmware build`
-Expected: `Project build complete`, файл `firmware/build/groovebox.bin` меньше 0x180000 байт.
+Expected: `Project build complete`; `firmware/build/groovebox.bin` is smaller than 0x180000 bytes.
 
-- [ ] **Step 8: Коммит**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add .gitignore components tools firmware
@@ -3015,18 +3017,18 @@ git commit -m "feat: add drum machine firmware"
 
 ---
 
-### Task 8: Автоматическая проверка на устройстве
+### Task 8: Automated device validation
 
 **Files:**
 - Create: `tools/device_test.py`
 - Test: `tools/test_device_test.py`
-- Modify: `docs/superpowers/specs/2026-11-09-groovebox-design.md` (раздел «Результаты этапа 2»)
+- Modify: `docs/superpowers/specs/2026-11-09-groovebox-design.md` (Stage 2 results section)
 
 **Interfaces:**
-- Consumes: `tools/slot.py install-app`, консоль прошивки из Задачи 7.
-- Produces: `python3 tools/device_test.py` с кодом выхода 0 при успехе.
+- Consumes: `tools/slot.py install-app` and the Task 7 firmware console.
+- Produces: `python3 tools/device_test.py`, exiting with code 0 on success.
 
-- [ ] **Step 1: Написать падающий тест разбора ответов**
+- [ ] **Step 1: Write a failing response-parser test**
 
 <!-- file: tools/test_device_test.py -->
 ```python
@@ -3058,7 +3060,7 @@ if __name__ == "__main__":
 Run: `python3 tools/test_device_test.py`
 Expected: FAIL, `ModuleNotFoundError: No module named 'device_test'`.
 
-- [ ] **Step 2: Реализовать проверку**
+- [ ] **Step 2: Implement validation**
 
 <!-- file: tools/device_test.py -->
 ```python
@@ -3249,18 +3251,18 @@ if __name__ == "__main__":
 ```
 
 Run: `python3 tools/test_device_test.py`
-Expected: `OK`, 4 теста.
+Expected: `OK`, 4 tests.
 
-- [ ] **Step 3: Установить и проверить на устройстве**
+- [ ] **Step 3: Install and check on hardware**
 
-Эти шаги выполняет контроллер. Карта microSD должна быть в устройстве.
+The controller performs these steps. The microSD card must be inserted.
 
 Run: `python3 tools/slot.py install-app firmware/build/groovebox.bin && python3 tools/device_test.py`
-Expected: все строки `PASS`, `0 failures`, код выхода 0.
+Expected: all `PASS` lines, `0 failures`, exit code 0.
 
-- [ ] **Step 4: Записать результаты и закоммитить**
+- [ ] **Step 4: Record results and commit**
 
-Добавить в конец спецификации раздел «Результаты этапа 2» с фактическими значениями из вывода: тип файловой системы, нагрузка процессора, уровни с микрофона.
+Append Stage 2 results to the specification using actual output: filesystem type, CPU load and microphone levels.
 
 ```bash
 git add tools docs

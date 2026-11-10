@@ -1,290 +1,280 @@
-# Cardputer Groovebox: дизайн первой версии
+# Cardputer Groovebox: first-version design
 
-Дата: 2026-11-09. Статус: на проверке у автора проекта.
+Date: 2026-11-09. Original status: under review by the project author.
 
-## Цель
+**Historical specification:** this combines initial proposals with subsequent stage
+results. Proposed effects and old controls are not a current feature list. Consult
+the [current guides](../../README.md) and [visual review](../../visual-refresh.md).
 
-Самостоятельная прошивка для M5Stack Cardputer ADV, на которой можно написать трек целиком
-на устройстве: собрать ударные по шагам, записать поверх синты и сэмплы, разложить всё по
-сценам и песне, свести.
+## Goal
 
-Рабочий процесс вдохновлён Ableton: Drum Rack, MIDI-клипы, Session View. Это отдельный
-продукт. Код, звуки и название GLIDE не используются: её исходники закрыты.
+Standalone firmware for M5Stack Cardputer ADV that can create a complete track on
+the device: sequence drums, record synths and samples, arrange scenes into a song
+and mix it.
 
-## Границы первой версии
+The workflow is inspired by Ableton's Drum Rack, MIDI clips and Session View.
+It is an independent product and does not use GLIDE code, sounds or branding.
 
-Входит: степ-секвенсор, инструментальные дорожки, сцены, цепочка песни, микшер с эффектами,
-сэмплы с SD, запись с микрофона и нарезка.
+## First-version scope
 
-Не входит: экспорт в WAV (архитектура его не исключает, можно добавить позже), свободный
-таймлайн, запись аудиодорожек в реальном времени как дорожек трека, автоматизация
-параметров, эквалайзеры на дорожках.
+Planned: step sequencer, instrument tracks, scenes, song chain, mixer with effects,
+SD samples, microphone recording and slicing.
 
-## Железо и ограничения
+Excluded: on-device WAV export (the architecture allows it later), a free timeline,
+real-time recording of full audio tracks, parameter automation and per-track EQ.
 
-- ESP32-S3, 240 МГц, два ядра, 8 МБ flash, без PSRAM (подтверждено чтением чипа).
-- Экран 240×135, клавиатура через контроллер TCA8418.
-- Кодек с микрофоном и динамиком. Предположительно моно, проверяется прототипом 1.
-- microSD на 200 ГБ, вероятно exFAT.
-- Устройство уже содержит Launcher (0x10000, 0x150000 байт) и GLIDE (0x170000, 0xF0000 байт).
-  Свободно 0x260000..0x800000, это примерно 5,6 МБ.
+## Hardware and constraints
 
-## Стек
+- ESP32-S3, dual core at 240 MHz, 8 MB flash, no PSRAM (confirmed by chip readout).
+- 240×135 display and keyboard through TCA8418.
+- Codec with microphone and speaker; presumed mono, to be checked in prototype 1.
+- A 200 GB microSD card, initially presumed exFAT.
+- Existing Launcher at `0x10000`, size `0x150000`, and GLIDE at `0x170000`, size
+  `0xF0000`. Free space: `0x260000..0x800000`, about 5.6 MB.
 
-ESP-IDF, C++, M5GFX для экрана. Свои драйверы I2S и кодека, потому что нужна одновременная
-работа микрофона и динамика. Движок и секвенсор не зависят от железа и собираются на ПК.
+## Stack and modules
 
-## Модули
+ESP-IDF, C++ and M5GFX. Custom I2S/codec drivers support simultaneous input/output.
+The engine and sequencer are hardware-independent and build on a PC.
 
-| Модуль | Ответственность | Зависит от |
+| Module | Responsibility | Dependencies |
 |---|---|---|
-| `model` | Данные проекта фиксированного размера | ничего |
-| `sequencer` | Паттерны, сцены, песня, время в сэмплах | `model` |
-| `engine` | Голоса синта, ударные, сэмплер, микшер, эффекты | `model` |
-| `hal` | Кодек и I2S, клавиатура, экран, SD, flash | ESP-IDF |
-| `storage` | Сохранение проектов, библиотека сэмплов | `model`, `hal` |
-| `ui` | Экраны и управление | `model`, `hal`, очередь команд |
+| `model` | Fixed-size project data | None |
+| `sequencer` | Patterns, scenes, song and sample timing | `model` |
+| `engine` | Synth voices, drums, sampler, mixer and effects | `model` |
+| `hal` | Codec/I2S, keyboard, display, SD and flash | ESP-IDF |
+| `storage` | Project saving and sample library | `model`, `hal` |
+| `ui` | Screens and controls | `model`, `hal`, command queue |
 
-Во время игры память не выделяется.
+No memory allocation during playback.
 
-## Аудио и тайминг
+## Audio and timing
 
-- Аудиозадача закреплена на одном ядре, интерфейс и SD работают на другом.
-- UI передаёт команды в аудиозадачу через очередь SPSC без блокировок.
-- Секвенсор считает время в сэмплах внутри аудиопотока.
-- Целевой формат 32 кГц, 16 бит, моно. Запасной вариант 22,05 кГц, если прототип 2 покажет
-  нехватку процессора.
+- Pin the audio task to one core; UI and SD run on the other.
+- UI sends commands through a lock-free SPSC queue.
+- The sequencer counts samples inside the audio stream.
+- Target 32 kHz, 16-bit mono; fallback 22.05 kHz if prototype 2 lacks CPU headroom.
 
-## Модель данных
+## Data model
 
-- Время считается в тиках, 96 тиков на четверть, размер такта 4/4 (384 тика). Темп 40..240 BPM.
-- Сетка задаётся у каждого паттерна: 1/4 (96 тиков), 1/8 (48), 1/16 (24), 1/32 (12),
-  1/8T (32), 1/16T (16). По умолчанию 1/16.
-- Свинг: общий для проекта, 50..75 %, где 50 % это ровный ритм. Задерживает каждый второй шаг
-  паттернов с сеткой 1/8, 1/16 и 1/32. На сетки 1/4 и триольные не действует. Каждую дорожку можно
-  исключить из свинга.
-- Проект: драм-рэк на 8 звуков, 4 синт-дорожки и отдельная дорожка SMP,
-  16 паттернов на дорожку, 16 сцен, цепочка песни до 64 записей.
-- У каждого паттерна своя длина: 4, 8 или 16 шагов.
-- Паттерн драм-рэка: для каждого из 8 звуков 16 шагов, у шага есть состояние и сила удара.
-- Инструментальный паттерн: до 64 нот. Нота хранит высоту, начало и длину в тиках, силу удара.
-  Смена сетки не двигает уже записанные ноты, она меняет только шаг редактирования и выравнивания.
-- Смена сетки в паттерне ударных пересчитывает шаги по времени: шаг сохраняется, если его время
-  попадает на новую сетку, и теряется иначе. Перед такой потерей действует отмена.
-- Сцена: номер паттерна или «пусто» для каждой из 6 дорожек.
-- Длина паттерна в тиках равна числу шагов, умноженному на размер шага.
-- Длина сцены равна самому длинному её паттерну в тиках. Более короткие паттерны зацикливаются
-  внутри.
-- Запись песни: сцена и число повторов длины сцены.
-- Запуск сцены срабатывает на ближайшей границе такта (384 тика).
+- 96 ticks per quarter note; 4/4 bars of 384 ticks; 40–240 BPM.
+- Per-pattern grid: 1/4 (96 ticks), 1/8 (48), 1/16 (24), 1/32 (12), 1/8T (32),
+  1/16T (16). Default 1/16.
+- Global swing 50–75%, with 50% straight. Delay alternate steps on 1/8, 1/16 and
+  1/32 grids; do not affect 1/4 or triplets. Allow track exclusion from swing.
+- Eight-sound drum rack, four synth tracks and a separate SMP track; 16 patterns
+  per track, 16 scenes, up to 64 song entries.
+- Per-pattern length: 4, 8 or 16 steps.
+- Drum patterns hold 16 steps for each of eight sounds, with enabled state and velocity.
+- Instrument patterns hold up to 64 notes: pitch, start/length in ticks and velocity.
+  Grid changes affect editing/quantize steps without moving existing notes.
+- Drum-grid changes remap by time: retain a step if it lands on the new grid,
+  otherwise remove it, with undo available.
+- Scenes contain a pattern number or empty value for each of six tracks.
+- Pattern duration is step count × grid ticks. Scene duration is its longest
+  pattern; shorter patterns loop inside it.
+- A song entry contains a scene and a repeat count of its duration.
+- Scene launch takes effect on the next bar boundary (384 ticks).
 
-## Звук
+## Sound
 
-**Ударные (синтез).** 8 звуков по умолчанию: kick, snare, clap, closed hat, open hat, tom, rim,
-perc. Параметры: строй, длительность, окраска, громкость. Каждый звук монофонический: новый
-удар перезапускает его. Сэмплы назначаются на отдельные пэды дорожки SMP.
+**Synthesized drums:** kick, snare, clap, closed hat, open hat, tom, rim and perc.
+Parameters: tuning, decay, tone and level. Each sound is monophonic and retriggers
+on a new hit. Samples use separate SMP pads.
 
-**Синт.** Общий пул на 4 дорожки: 5 голосов без сэмплов, 4 при воспроизведении сэмплов. На голос: осциллятор
-(sine, triangle, saw, square), ADSR, низкочастотный фильтр с резонансом, скольжение между нотами.
-При нехватке уступает самый тихий голос.
+**Synth:** a shared pool across four tracks, ultimately five voices without samples
+and four while samples play. Each voice has sine/triangle/saw/square, ADSR, resonant
+low-pass and glide. Steal the quietest voice when full.
 
-**Сэмплер.** Отдельная дорожка SMP: 32 нарезки в библиотеке, 8 пэдов с собственными
-назначениями в каждом из 16 паттернов. Четыре одновременно звучащих one-shot голоса,
-ручные границы, масштабирование волны и равная нарезка на 4/8/16/32 части.
+**Sampler:** 32 slices, eight pads with per-pattern assignments across 16 patterns,
+four simultaneous one-shot voices, manual bounds, waveform zoom and equal chopping
+into 4/8/16/32 parts.
 
-**Микшер.** На полоску (драм-рэк, 4 синта и SMP): громкость, mute, solo, фильтр, перегруз, посылы.
-Общие delay и reverb по посылам. Сайдчейн от kick на выбранные дорожки. Лимитер на мастере.
-Панорама в первую версию не входит, потому что выход устройства, вероятно, моно.
+**Planned mixer:** drum rack, four synths and SMP, each with level, mute, solo,
+filter, drive and sends. Shared send delay/reverb, kick sidechain on selected tracks
+and a master limiter. Panning was excluded because the output was presumed mono.
+Effects described here were not implemented in the stage 4 results below.
 
-## Сэмплы и запись
+## Samples and recording
 
-- Исходники WAV и дубли с микрофона лежат в `/groovebox/samples/` на SD.
-  Исходники сохраняются без изменений, запись микрофона — WAV 16 бит, моно, 32 кГц.
-- Импорт WAV в другом формате пересэмплируется в рабочий формат.
-- При открытии проекта используемые нарезки копируются в раздел flash на 4 МБ (около 65 секунд
-  при 32 кГц) и читаются оттуда при игре. Запись во flash идёт только на остановленном треке.
-- Запись с микрофона идёт на SD и возможна поверх играющего трека, если это подтвердит прототип 1.
-- Границы нарезок ставятся вручную или автоматически делят выделение на равные части.
+- Source WAVs and microphone takes live in `/groovebox/samples/` on SD. Keep sources
+  unchanged; record microphone WAV as 16-bit mono at 32 kHz.
+- Resample imported WAVs to the working format.
+- Copy used slices into a 4 MB flash partition (about 65 seconds at 32 kHz) when
+  opening a project and read them there during playback. Write flash only while stopped.
+- Record microphone input to SD during playback if prototype 1 confirms it works.
+- Set slice boundaries manually or divide a selection into equal parts.
 
-## Экраны
+## Proposed screens and controls
 
-Глобально: `tab` переключает экраны по кругу, `fn`+`1..6` открывает нужный, `space` запуск и
-остановка, `alt` запись. Удержание `fn` открывает панель сочетаний и текущих параметров.
-`-`/`+` регулируют общую громкость на любом экране (5 %, с `ctrl` — 1 %).
-На ударных `fn`+`-`/`+` меняют темп.
+The original design used Tab to cycle screens, Fn+1..6 for direct access, Space for
+transport, Alt for recording and a held-Fn shortcut panel. The panel was later
+replaced by the Opt menu. Plain −/+ changes master by 5%, Ctrl by 1%; Fn+−/+ changes
+tempo in Drums.
 
-1. **Ударные.** Сетка 8×16. `1..8` выбирают звук, `q..i` и `a..k` переключают шаги 1..16.
-   `shift` со шагом ставит акцент, `fn`+`l` меняет длину, `fn`+`g` меняет сетку, `fn`+`w` меняет
-   свинг. Сетка и свинг так же меняются на экране инструмента.
-2. **Инструмент.** Компактный пианоролл. Раскладка пианино: `z..,` и `q..i` белые, ряды над ними
-   чёрные. `fn`+`-` и `fn`+`+` меняют октаву. Живая запись с настраиваемым выравниванием (включая
-   выключенное), правка нот курсором.
-3. **Сцены.** Строки это сцены, столбцы это дорожки с номерами паттернов.
-4. **Песня.** Список «сцена × повторы», запуск с любого места.
-5. **Микшер.** Полоски, посылы, сайдчейн, лимитер.
-6. **Сэмплер.** Запись, волна, нарезка, назначение на звуки и клавиши.
+1. **Drums:** 8×16 grid; 1..8 chooses sound; q..i / a..k toggles steps; Shift accents;
+   Fn+L changes length, Fn+G grid, Fn+W swing. Grid/swing also work in Synth.
+2. **Instrument:** compact piano roll; z.., and q..i are white keys, rows above are
+   black keys. Fn+−/+ changes octave. Live recording with optional quantize and
+   cursor-based note editing.
+3. **Scenes:** rows are scenes; columns hold track pattern numbers.
+4. **Song:** scene × repeats list, playable from any entry.
+5. **Mixer:** strips, proposed sends/sidechain and limiter.
+6. **Sampler:** recording, waveform, slicing and assignment to sounds/keys.
 
-Также: копирование и вставка паттернов, отмена последнего действия, автосохранение при остановке
-трека, предпрослушивание звука при выборе.
+Also planned: pattern copy/paste, last-action undo, autosave on stop and sound
+preview on selection.
 
-## Обработка ошибок
+## Error handling
 
-- Нет SD: инструмент работает, экран показывает, что сохранение недоступно, сэмплы и запись
-  с микрофона выключены.
-- Файл проекта пишется во временный и заменяет старый только после успешной записи.
-- У файла есть версия и контрольная сумма. Неизвестная версия или повреждение приводят к понятному
-  сообщению, старый файл не трогается.
-- Нет места во flash: нарезки, которые не поместились, не загружаются, экран их называет.
-- Перегрузки аудиопотока считаются и видны в отладочном индикаторе.
+- Without SD, instruments work but saving is visibly unavailable; samples and
+  microphone recording are disabled.
+- Write a temporary project file and replace the old one only after success.
+- Version and checksum failures show a clear message and leave the original intact.
+- If flash is full, do not load slices that cannot fit; identify them in the UI.
+- Count audio overflows and expose them in a debug indicator.
 
-## Тестирование
+## Testing and implementation order
 
-На ПК: автотесты тайминга секвенсора, длин паттернов, сцен, цепочки песни, сохранения и загрузки,
-включая повреждённые файлы. Движок рендерит эталонные звуки в WAV для сравнения.
+Host tests cover sequencer timing, pattern length, scenes, song chains and project
+save/load including corrupt files. The engine renders reference WAVs for comparison.
+Device checks run unattended: cable installation, a known speaker signal measured
+by the microphone, load measurements and USB results. Human feedback assesses sound
+and playing comfort.
 
-На устройстве проверки идут без участия человека: прошивка ставится по кабелю, сама воспроизводит
-известный сигнал через динамик, измеряет его микрофоном, замеряет нагрузку и передаёт результат
-по USB. Человек нужен только для оценки звучания и удобства игры.
+Each stage ends in runnable firmware:
 
-## Порядок сборки
+1. Prototypes: simultaneous input/output, voice capacity at 32 kHz, Launcher install
+   with a sample partition.
+2. Drum synthesis, grid, transport and saving.
+3. Synth tracks, live recording and step editing.
+4. Scenes and Song.
+5. Mixer and effects.
+6. SD samples.
+7. Microphone recording and slicing.
 
-Каждый этап заканчивается рабочей прошивкой, которую можно проверить на устройстве.
+## Risks and fallbacks
 
-1. Прототипы: (1) одновременная работа микрофона и динамика, (2) максимум голосов при 32 кГц,
-   (3) установка через Launcher приложения с разделом сэмплов.
-2. Драм-машина: синтез, сетка, запуск, сохранение.
-3. Инструментальные дорожки: синт, живая запись, шаговая правка.
-4. Сцены и песня.
-5. Микшер и эффекты.
-6. Сэмплы с SD.
-7. Запись с микрофона и нарезка.
+- If prototype 1 fails, permit microphone recording only while stopped.
+- If prototype 2 lacks headroom, use 22.05 kHz or fewer voices.
+- If prototype 3 fails, create the sample partition through cable installation;
+  Launcher installation becomes an optional path without samples.
+- If exFAT cannot mount, add FatFs support or consider a user-managed FAT32 card.
+  The application itself must never format the card.
 
-## Риски и запасные варианты
+## Prototype results
 
-- Прототип 1 не проходит: запись с микрофона только на остановленном треке.
-- Прототип 2 показывает нехватку: 22,05 кГц или меньше голосов.
-- Прототип 3 не проходит: раздел сэмплов создаётся при прошивке по кабелю, а установка через
-  Launcher становится необязательным вариантом без сэмплов.
-- exFAT не монтируется: карта форматируется в FAT32 или добавляется поддержка на уровне FatFs.
+Checked on the author's device on 2026-11-09–10.
 
-## Результаты прототипов
+- Sample rate: 32 kHz. The last probe's simple test voice used 5.4% for eight voices
+  and 10.6% for sixteen; real synth voices would cost more.
+- Simultaneous playback, microphone capture and SD writing worked. The final run
+  wrote 960,000/960,000 bytes with zero lost blocks or I2S overflows during 15 seconds
+  after a 256 ms settling period. Maximum SD write was 10 ms. Across all runs, the
+  worst write was 47 ms, but that run's counter did not yet separate recording
+  overflows from the final pause, so behavior at that latency remained unconfirmed.
+- The author's filesystem mounted with an exFAT-enabled FatFs copy, but its type
+  was not identified then, leaving the exFAT question open.
+- Microphone left/right channels matched; use left, gain register `0x14 = 0x18`.
+  Recorded speech was audible with ×8 digital gain. Speaker tone dominated speech
+  during recording, requiring a separate over-playback check before stage 7.
+- Speaker tones at 1, 2 and 3 kHz appeared in the microphone 70–84 dB above silence.
+  The test did not distinguish acoustic from internal electrical coupling.
+- A 4 MB sample partition was created by cable; writing and memory-mapped reading
+  worked. Launcher creation was checked only in its source, pending a real install.
 
-Проверено на устройстве автора 2026-11-09..10.
+## Stage 2 results
 
-- Частота: 32 кГц.
-- Нагрузка тестового голоса в последней сборке пробы: 8 голосов 5,4 %, 16 голосов 10,6 %.
-  Настоящие голоса будут тяжелее.
-- Одновременные воспроизведение, запись с микрофона и запись на SD работают. В итоговом прогоне:
-  960 000 байт из 960 000, 0 потерянных блоков, 0 переполнений I2S за 15 секунд записи без первых
-  256 мс на установление, самая долгая запись на SD 10 мс. Худшая запись на SD за все прогоны 47 мс;
-  в том прогоне счётчик ещё не отделял переполнения записи от завершающей паузы, поэтому поведение
-  при такой задержке не подтверждено.
-- Файловая система карты автора смонтирована и работает с копией FatFs, где включён exFAT. Какой
-  именно тип файловой системы на карте, не определялось, поэтому риск exFAT остаётся открытым.
-- Микрофон: левый и правый каналы совпадают, используется левый, усиление 0x14 = 0x18.
-  Записанный голос слышен при воспроизведении с цифровым усилением ×8. При играющем тестовом тоне
-  уровень записи речи низок по сравнению с тоном, попадающим в микрофон; запись поверх
-  воспроизведения нужно проверить отдельным тестом, прежде чем на неё опирается этап 7.
-- Акустическая петля: тон 1, 2 и 3 кГц через динамик виден в микрофоне на 70..84 дБ выше тишины.
-  Тест не отличает акустическую связь от электрической внутри устройства.
-- Раздел сэмплов 4 МБ: по кабелю создан, запись и чтение через memory-map работают.
-  Создание этого раздела самим Launcher проверено только по его исходному коду, его нужно
-  подтвердить при первой установке настоящей прошивки через Launcher.
+Two consecutive automatic runs on the author's device passed on 2026-11-10.
 
-## Результаты этапа 2
+- The card was identified as FAT32, resolving the exFAT question for this card.
+- Snare playback used 9.4–10.6% of one audio core.
+- Microphone peak was about 13,900 during playback versus 96–160 in silence,
+  returning to 126–129 after stop.
+- No audio overflows during three seconds of playback or saving.
+- Steps, grid changes, undo, swing and saving across reboot worked.
+- Display detected as 240×135; keyboard controller initialized without errors.
+- Edits without playback autosaved after three seconds and survived reboot.
+- Physical keys, image orientation and subjective sound awaited the author's review.
 
-Автоматическая проверка на устройстве автора 2026-11-10, два прогона подряд, все проверки пройдены.
+## Stage 3 results
 
-- Карта автора отформатирована в FAT32, поэтому вопрос с exFAT для неё закрыт.
-- Нагрузка аудиозадачи при игре малого барабана: 9,4..10,6 % одного ядра.
-- Микрофон слышит динамик при игре: пик около 13 900 против 96..160 в тишине, после остановки снова 126..129.
-- За 3 секунды игры и во время сохранения нет переполнений аудио.
-- Шаги, смена сетки, отмена, свинг и сохранение после перезагрузки работают.
-- Экран определяется как 240×135, контроллер клавиатуры запускается без ошибок.
-- Изменения без запуска трека сохраняются через 3 секунды и переживают перезагрузку.
-- Физические нажатия клавиш, ориентацию изображения и звучание должен подтвердить автор.
+Implemented and checked on 2026-11-10. Cable installation wrote the `groovebox`
+slot without overwriting Launcher or GLIDE.
 
+- Four synth tracks, 16 patterns each, 64 notes per pattern and **five shared voices**
+  at 32 kHz. Both the eight-voice target and intermediate six-voice pool exceeded
+  the accepted 50% core budget in trial builds.
+- Sine/triangle/saw/square, ADSR, resonant low-pass, glide, live chords, quantized or
+  free recording, piano roll, copy/paste and undo. Runtime tokens independently
+  release repeated pitches and live/sequencer notes.
+- 156 core tests with ASan/UBSan and 46 Python tests passed. `device_synth_test.py`
+  and `device_test.py` both reported `0 failures` on the final build.
+- Stress scenario: all eight drums, four simultaneous 64-note patterns, loop-length
+  notes, maximum resonance/release/glide and intentional excess polyphony. Each
+  tempo ran for 60 seconds after warmup with display updates and USB polling.
+  Audio-task peaks: **46.2% at 40 BPM**, **48.4% at 240 BPM**. Extra live playing,
+  stopping and saving did not raise these peaks.
+- No new TX/RX I2S overflows, exchange errors or event-buffer overflows in either
+  run, including live playing/saving. Measurements used increments after warmup;
+  initial I2S counter values were not counted as run failures.
+- All voices released after stop, allowing up to four seconds of release. A tiny
+  test buffer used AllNotesOff on overflow and suppressed attacks for the rest of
+  the block. Normal capacity was 544 events; render chunks were at most 256 frames.
+- Shared drum/synth sine table; cached drum coefficients and note schedules;
+  separate linear release/attack passes. Schedules update on edits/grid/swing.
+  No allocation during rendering.
+- Free heap: 112,808 bytes under load, 112,632 after saving. Minimum observed stack
+  headroom: audio 7,056 and UI 4,380 bytes out of 8,192. Static `.data + .bss`:
+  156,280 bytes; application 667,184 bytes in the `0x180000` slot.
+- Microphone peaks: live chord 2,187, recorded loop 2,696, silence 60. Snare recheck:
+  13,955 versus 58, then 72 after stop; audio load 8.2% in that run.
+- Notes, synth parameters and quantize survived reboot. A real old-revision v1 file
+  loaded from SD without LOAD ERR and saved as v2 after editing. Temporary/primary
+  validation reused shared scratch instead of a fourth Project copy.
+- Both tests used a separate project and retained test mode across reset, then
+  restored the regular project. `default.gbp` and `.bak` checksums matched before
+  and after each test; the card was not formatted.
+- Physical comfort and subjective timbre remained for the author to assess.
+  See [synth controls](../../stage-3.md); `make render-synth` generates audio examples.
 
-## Результаты этапа 3
+## Stage 4 results and author-requested additions
 
-Реализовано и проверено на устройстве автора 2026-11-10. Прошивка установлена по кабелю
-в слот `groovebox`; Launcher и GLIDE не перезаписывались.
+Checked and installed on the author's Cardputer on 2026-11-10.
 
-- Четыре синт-дорожки, 16 паттернов на дорожку, до 64 нот в паттерне; общий пул **5 голосов**.
-  Цель в 8 голосов проверялась в пробных сборках, но превышала принятый бюджет 50 % ядра.
-  Промежуточный пул 6 голосов также превышал его. Частота остаётся 32 кГц.
-- Формы sine/triangle/saw/square, ADSR, резонансный low-pass, glide; живая игра и аккорды,
-  запись по сетке и без выравнивания, пианоролл, copy/paste и undo. Повторные ноты одной высоты
-  и живые/секвенсорные ноты освобождаются независимо по runtime token.
-- 156 тестов ядра с ASan/UBSan и 46 тестов Python пройдены. Программы `device_synth_test.py`
-  и `device_test.py` завершились с `0 failures` на итоговой сборке.
-- Нагрузочный сценарий: все 8 ударных, четыре паттерна по 64 ноты одновременно, длина нот
-  в целый цикл, максимальные resonance/release/glide, намеренное превышение полифонии.
-  На каждом темпе измерялось 60 секунд после прогрева, с обновлениями экрана и USB-опросом.
-  Пиковая нагрузка аудиозадачи: **46,2 % при 40 BPM**, **48,4 % при 240 BPM**. Дополнительная
-  живая игра, остановка и сохранение не увеличили эти пики.
-- Ноль новых переполнений TX/RX I2S, ошибок обмена и переполнений буфера событий в обоих
-  прогонах, в том числе при живой игре и сохранении. Сравниваются приращения после прогрева;
-  стартовые значения счётчиков I2S не считаются ошибкой этих прогонов.
-- Все голоса освобождаются после stop с учётом release до 4 секунд. При переполнении
-  тестового маленького буфера секвенсора предусмотрен AllNotesOff; новые атаки до конца
-  блока подавляются. Штатный буфер — 544 события; рендер разбивается на блоки до 256 кадров.
-- Синус ударных и синта берётся из общей таблицы; дорогие коэффициенты ударных кэшируются.
-  Расписание нот пересчитывается при правках, сетке и свинге, а снятия и атаки выполняются
-  отдельными линейными проходами. Память во время рендера не выделяется.
-- Свободная куча в нагрузочном прогоне: 112 808 байт; после сохранения — 112 632 байта.
-  Минимальный наблюдённый свободный остаток стека: аудио 7 056, UI 4 380 байт из 8 192.
-  Статические `.data + .bss`: 156 280 байт; файл приложения 667 184 байта из слота 0x180000.
-- Микрофон: живой аккорд — пик 2 187, записанный цикл — 2 696 против 60 в тишине.
-  Повторная проверка малого барабана: пик 13 955 против 58, после остановки 72;
-  нагрузка аудиозадачи в этом прогоне 8,2 %.
-- Ноты, параметры синта и выравнивание пережили перезагрузку. Настоящий файл v1 со старой
-  ревизии загружен через SD без LOAD ERR, после правки успешно сохранён в v2. Проверка
-  временных/основных файлов использует общий scratch вместо четвёртой копии Project.
-- Оба теста используют отдельный проект и сохраняют тестовый режим через reset; после
-  завершения возвращается обычный проект. Контрольные значения `default.gbp` и `.bak`
-  совпали до и после каждого теста; карта не форматировалась.
-- Физическое удобство раскладки и субъективное качество тембров остаются для оценки автором.
-  Управление описано в `docs/stage-3.md`; примеры звука генерирует `make render-synth`.
-
-
-## Результаты этапа 4 и дополнений автора
-
-Проверено на Cardputer автора 2026-11-10, итоговая прошивка установлена.
-
-- Пять экранов по Tab / Fn+1..5: ударные, синт, сцены, песня, микшер.
-- Fn+Backspace очищает содержимое текущего паттерна с undo, сохраняя сетку, длину и звук.
-  Проверены очистка при записи и восстановление завершённых нот.
-- Пианоролл сразу рисует удерживаемые клавиши, следует за высотой и в режиме FIT вмещает
-  диапазон всех нот. Fn+F включает точный масштаб. Открытие паттерна фокусируется на его нотах.
-- Арпеджиатор на каждой синт-дорожке: Off/Up/Down/UpDown, шесть сеток с триолями,
-  1..3 октавы и gate. Обрабатываются живые и клиповые аккорды, в паттерне хранится
-  исходный аккорд. На stop/очистке и при смене режима ноты освобождаются.
-- 16 сцен назначают независимые блоки пяти дорожек, включая пустые ячейки. Запуск сцены
-  во время игры ждёт глобальной границы такта. Цепочка — до 64 записей, 1..255 повторов;
-  есть вставка, удаление, правка и undo, запуск с выбранного элемента, естественное окончание.
-- Выбор паттерна в редакторе меняет выбранную сцену, а не безусловно сцену 0. Запись
-  поверх песни выбирает блок действительно играющей сцены и заканчивается при переходе
-  к следующей записи. Длина удержания считается в непрерывных тиках транспорта.
-- Микшер: MAIN после лимитера и DRUM/T1..T4, уровни 0..100%, mute, solo и undo.
-  Проверено реальное изменение PCM-выхода, тишина при master 0 и независимость полос.
-- Формат v3 сохраняет микшер и арпеджиаторы, читает v1/v2 с начальными значениями новых полей.
-  На устройстве подтверждены восстановление сцены/песни/микшера/арпа и фокуса пианоролла после reset.
-- Пройдены 172 теста C++ с ASan/UBSan и 49 Python-тестов. Новый аппаратный сценарий,
-  нагрузка арпеджиаторов и обе прежние регрессии завершились с `0 failures`.
-- На каждом нагрузочном сценарии — 60 секунд после прогрева. Пики аудиоядра:
-  4 арпеджиатора + 8 ударных — 47,0%; плотные 4 паттерна по 64 ноты с 8 ударными —
-  47,1% при 40 BPM и 49,4% при 240 BPM. Пул остаётся 5 голосов, частота 32 кГц.
-  Новых переполнений I2S/событий и ошибок обмена не обнаружено, в том числе при live/сохранении.
-- Свободная куча в нагрузке: 110 376 байт, после сохранения 110 200. Минимальные
-  наблюдённые остатки стеков: audio 7 040 и UI 4 348 байт. Статические data+bss:
-  158 712 байт; образ приложения 680 896 байт из слота 0x180000.
-- По просьбе автора все синтетические аппаратные проверки идут с master 5% и независимым
-  потолком 5% после лимитера, который действует и при загрузке фикстур/перезагрузке.
-  Контролируются PCM-пики не выше 1557 и успешный обмен I2S. Микрофонные измерения остаются
-  диагностическими: на такой громкости сигнал не всегда достаточно превышает фон.
-- Во всех сценариях использован отдельный тестовый проект; контрольные значения обычного
-  файла и backup совпали до и после. Launcher и GLIDE не перезаписывались; карта не форматировалась.
-  Сборка старого probe с ограничением 5% также прошла; на устройство он не устанавливался.
-- Управление и воспроизводимые команды: `docs/stage-4.md`. Оценка тембров и удобства
-  физической игры остаётся за автором, эффекты из этапа 5 пока не добавлялись.
+- Five workspaces via Tab / Fn+1..5: Drums, Synth, Scenes, Song and Mixer.
+- Fn+Backspace clears current content with undo while retaining grid, length and
+  sound. Clearing during recording and restoring finalized notes were checked.
+- Piano roll immediately displays held keys and follows pitch. FIT includes all
+  notes; Fn+F selects precise zoom; opening a pattern focuses its register.
+- Per-track Off/Up/Down/UpDown arpeggiators with six grids including triplets,
+  1–3 octaves and gate. Live/clip chords are supported; the original chord is
+  stored. Stop, clear and mode changes release notes.
+- Sixteen scenes assign independent patterns across the then-five tracks, including
+  empty cells. Live launches wait for the global bar boundary. Up to 64 song entries,
+  1–255 repeats, insert/delete/edit/undo, play from selection and natural completion.
+- Editor pattern selection changes the selected scene rather than always scene 0.
+  Recording over Song targets the playing scene and ends at the next entry.
+  Holds use continuous transport ticks.
+- MAIN after the limiter plus DRUM/T1..T4, levels 0–100%, mute, solo and undo.
+  PCM changes, silence at master zero and strip independence were checked.
+- File v3 stores mixer/arpeggiators and reads v1/v2 with defaults for new fields.
+  Scene/song/mixer/arp restoration and piano-roll focus were checked after reset.
+- 172 C++ tests with ASan/UBSan and 49 Python tests passed. The new device scenario,
+  arpeggiator stress and both previous regressions reported `0 failures`.
+- Each stress scenario ran 60 seconds after warmup: four arpeggiators + eight drums
+  peaked at 47.0%; four dense 64-note patterns + eight drums peaked at 47.1% at
+  40 BPM and 49.4% at 240 BPM. Five voices at 32 kHz; no new I2S/event overflows or
+  exchange errors, including live playing/saving.
+- Free heap: 110,376 bytes under load, 110,200 after saving. Minimum stack headroom:
+  audio 7,040, UI 4,348 bytes. Static data+bss: 158,712; application: 680,896 bytes
+  in the `0x180000` slot.
+- At the author's request, synthetic hardware checks use master 5% and an independent
+  5% post-limiter ceiling, including fixture loads/reboots. PCM peaks must be at
+  most 1557 and I2S exchange successful. Microphone results are diagnostic because
+  the signal may not sufficiently exceed background noise at this volume.
+- All scenarios used an isolated project; regular-file and backup checksums matched.
+  Launcher/GLIDE were not overwritten and the card was not formatted. The old probe
+  also built with a 5% limit but was not installed.
+- See [controls and reproducible commands](../../stage-4.md). Timbre and physical
+  playing comfort remained for the author; planned stage 5 effects were not added.

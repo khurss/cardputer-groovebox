@@ -1,35 +1,47 @@
-# Заметки для плана этапа 2
+# Notes for the stage 2 plan
 
-Итог финального ревью этапа прототипов и ядра времени.
+Historical findings from the final prototype and timing-core review.
+See the [current documentation](../../README.md) for implemented behavior.
 
-## Обязательно на этапе 2
+## Required in stage 2
 
-- Проверять диапазоны при загрузке проекта и в командах: `bpm`, `length`, `repeats`, `noteCount`, номер сцены. Иначе `bpm` или `length`, равные 0, делят на ноль в аудиозадаче, а длина больше 16 и лишние ноты выходят за границы массивов.
-- Создать `CMakeLists.txt` для компонента `gb_core`. Для проекта в корне `tools/idf.sh` создаст `components/fatfs`, а `.gitignore` сейчас игнорирует только копию пробы. Проверять, что `sed` действительно включил exFAT.
-- Правки интерфейса должны попадать в `Project` без разрывов: `render` читает его напрямую, все вызовы `Sequencer` идут из аудиозадачи, команды идут через очередь SPSC.
-- `Project` занимает около 27 КБ. Сбрасывать его на месте и не копировать целиком на стек, отмена не должна хранить полные копии.
-- Операция смены сетки в паттерне ударных с пересчётом шагов и отменой ещё не реализована.
-- Движок должен спокойно принимать NoteOff без парного NoteOn.
-- Определять и выводить тип файловой системы карты, риск exFAT открыт.
+- Validate ranges when loading projects and applying commands: `bpm`, `length`,
+  `repeats`, `noteCount` and scene index. Zero `bpm` or `length` divides by zero in
+  the audio task; lengths above 16 and excess notes access arrays out of bounds.
+- Add `CMakeLists.txt` for `gb_core`. For a root project, `tools/idf.sh` creates
+  `components/fatfs`, but `.gitignore` currently ignores only the probe copy.
+  Verify that `sed` actually enables exFAT.
+- UI edits must reach `Project` without tearing: `render` reads it directly, all
+  `Sequencer` calls run in the audio task, and commands use an SPSC queue.
+- `Project` occupies about 27 KB. Reset it in place rather than copying it onto
+  the stack; undo must not store full project copies.
+- Drum-grid conversion with step remapping and undo is still missing.
+- The engine must tolerate NoteOff without a matching NoteOn.
+- Detect and report the card filesystem; the exFAT risk remains open.
 
-## Этап 3
+## Stage 3
 
-- Зарезервировать в буфере событий место для NoteOff и AllNotesOff, сейчас при переполнении они теряются и ноты зависают.
-- Запретить ноты с `lengthTicks = 0` при создании и загрузке.
-- Свингованный конец почти полной ноты вне сетки может попасть сразу после её начала (`start 30, length 378`, свинг 75).
-- Тесты: `playSong` во время игры, снятие ноты через конец цикла.
+- Reserve event-buffer space for NoteOff and AllNotesOff; overflow currently loses
+  them and leaves notes stuck.
+- Reject `lengthTicks = 0` when creating or loading notes.
+- The swung end of a nearly full-length off-grid note can land just after its start
+  (`start 30, length 378`, swing 75).
+- Test `playSong` during playback and note release across a loop boundary.
 
-## Этап 4
+## Stage 4
 
-- Запуск сцены из песни считает такт от начала записи песни, а не от общего времени.
-- Время конца записи песни кешируется, а длина сцены меняется на лету.
+- Launching a scene from a song counts bars from the song-entry start rather than
+  global time.
+- A song entry's end is cached even though scene length can change live.
 
-## Этап 6 и 7
+## Stages 6 and 7
 
-- Подтвердить, что сам Launcher создаёт раздел сэмплов при установке.
-- Отдельно проверить запись голоса поверх громкого трека: тон доходит до микрофона намного громче речи.
-- Ожидаемая худшая запись на SD 47 мс, поведение при такой задержке не подтверждено.
+- Confirm that Launcher itself creates the sample partition during installation.
+- Separately check voice recording over a loud track: the microphone picks up the
+  tone much more strongly than speech.
+- The observed worst SD write is 47 ms; behavior at that latency is unconfirmed.
 
-## Правила проверок
+## Validation rules
 
-Проверки на устройстве идут без участия человека: установка по кабелю, сигнал из динамика измеряется микрофоном, результат передаётся по USB.
+Device checks run unattended: cable installation, speaker signal measured by the
+microphone, and results returned over USB.

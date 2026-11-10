@@ -1,54 +1,56 @@
-# Groovebox: прототипы железа и ядро секвенсора. План реализации
+# Groovebox: hardware prototypes and sequencer core implementation plan
+
+> **Historical implementation plan.** Code samples and instructions describe the original stage, not the current firmware. Use the [current guides](../../README.md) for controls, installation and the 5% audio-test ceiling.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** подтвердить на реальном Cardputer ADV границы железа и получить протестированное на ПК ядро времени: сетки, свинг, паттерны, сцены, песня.
+**Goal:** confirm real Cardputer ADV hardware limits and build a host-tested timing core: grids, swing, patterns, scenes and song.
 
-**Architecture:** одна одноразовая прошивка-проба ставится рядом с Launcher и GLIDE и проверяет три рискованных предположения. Ядро `gb_core` написано на C++17 без зависимостей от железа, тестируется на ПК и позже подключается к прошивке как компонент ESP-IDF.
+**Architecture:** install one disposable probe beside Launcher and GLIDE to test three risky assumptions. The hardware-independent C++17 `gb_core` is tested on a PC and later integrated as an ESP-IDF component.
 
-**Tech Stack:** ESP-IDF v5.5.1 в Docker (локальный образ `cbc2e2ec2afe`), C++17, g++ и make на ПК, Python 3 (только стандартная библиотека).
+**Tech Stack:** ESP-IDF v5.5.1 in Docker (original local image `cbc2e2ec2afe`), C++17, host g++/make and Python 3 standard library. For current setup, use the root README.
 
 **Spec:** `docs/superpowers/specs/2026-11-09-groovebox-design.md`
 
 ## Global Constraints
 
-- Код, звуки и название GLIDE не используются.
-- Устройство: ESP32-S3, 8 МБ flash, без PSRAM, порт `/dev/ttyACM0`.
-- Launcher (0x10000) и GLIDE (0x170000) не перезаписываются. `idf.py flash` запрещён, он сотрёт Launcher.
-- Карта microSD никогда не форматируется программой.
-- Время в тиках: 96 на четверть, 384 на такт.
-- Сетки: 1/4 (96), 1/8 (48), 1/16 (24), 1/32 (12), 1/8T (32), 1/16T (16).
-- Свинг 50..75 %, действует на каждый второй шаг сеток 1/8, 1/16, 1/32.
-- Выводы: I2C SDA 8, SCL 9, ES8311 адрес 0x18; I2S BCK 41, WS 43, DOUT 42, DIN 46, без MCLK; SD SCK 40, MOSI 14, MISO 39, CS 12.
-- Захват ES8311 включается записью 0x0D только при работающем тактировании I2S (около +30, +60, +90 мс).
-- Целевой формат звука 32 кГц, 16 бит.
+- Do not use GLIDE code, sounds or branding.
+- Device: ESP32-S3, 8 MB flash, no PSRAM, port `/dev/ttyACM0`.
+- Do not overwrite Launcher (0x10000) or GLIDE (0x170000). Never use `idf.py flash`: it would erase Launcher.
+- The application must never format the microSD card.
+- Time: 96 ticks per quarter note, 384 per bar.
+- Grids: 1/4 (96), 1/8 (48), 1/16 (24), 1/32 (12), 1/8T (32), 1/16T (16).
+- Swing 50–75%, affecting alternate steps on 1/8, 1/16 and 1/32 grids.
+- Pins: I2C SDA 8, SCL 9, ES8311 address 0x18; I2S BCK 41, WS 43, DOUT 42, DIN 46, no MCLK; SD SCK 40, MOSI 14, MISO 39, CS 12.
+- Enable ES8311 capture by writing 0x0D only while I2S clocks run (around +30, +60, +90 ms).
+- Target audio format: 32 kHz, 16-bit.
 
-## Дорожная карта
+## Roadmap
 
-Этот план покрывает этап 1 и временное ядро этапа 2. Детальные планы этапов 2..7 пишутся после Задачи 4, потому что частота, число голосов и способ хранения сэмплов зависят от её результатов.
+This plan covers stage 1 and the stage 2 timing core. Detailed stage 2–7 plans follow Task 4 because sample rate, voice count and sample storage depend on its results.
 
-| Этап | Содержание | Где сетка и свинг |
+| Stage | Scope | Grid and swing behavior |
 |---|---|---|
-| 1 | Прототипы (Задачи 1..4) | |
-| 2 | Драм-машина: ядро времени (Задачи 5..6), затем синтез ударных, экран сетки, сохранение | Смена сетки и свинга на экране, пересчёт шагов при смене сетки |
-| 3 | Инструменты: синт, живая запись, пианоролл | Выравнивание по текущей сетке, свинг нот |
-| 4 | Сцены и песня: экраны | |
-| 5 | Микшер и эффекты | Исключение дорожек из свинга |
-| 6 | Сэмплы с SD | |
-| 7 | Запись с микрофона и нарезка | |
+| 1 | Prototypes (Tasks 1–4) | |
+| 2 | Drum machine: timing core (Tasks 5–6), then drum synthesis, grid view and saving | Screen controls for grid/swing; step remapping on grid change |
+| 3 | Instruments: synth, live recording, piano roll | Quantize to current grid; note swing |
+| 4 | Scenes and Song screens | |
+| 5 | Mixer and effects | Exclude tracks from swing |
+| 6 | SD samples | |
+| 7 | Microphone recording and slicing | |
 
 ---
 
-### Task 1: Сборка в Docker и установка рядом с Launcher
+### Task 1: Docker build and installation beside Launcher
 
 **Files:**
 - Create: `.gitignore`, `tools/idf.sh`, `tools/slot.py`
 - Test: `tools/test_slot.py`
 
 **Interfaces:**
-- Produces: `tools/idf.sh <каталог-проекта> <аргументы idf.py>`; `tools/slot.py install <bin> | select <метка> | remove-probe`.
+- Produces: `tools/idf.sh <project-directory> <idf.py-arguments>`; `tools/slot.py install <bin> | select <label> | remove-probe`.
 
-- [ ] **Step 1: Создать `.gitignore` и обёртку сборки**
+- [ ] **Step 1: Create `.gitignore` and the build wrapper**
 
 <!-- file: .gitignore -->
 ```gitignore
@@ -84,7 +86,7 @@ exec docker run --rm -v "$ROOT:/work" -w "/work/$PROJECT" -u "$(id -u):$(id -g)"
 
 Run: `chmod +x tools/idf.sh`
 
-- [ ] **Step 2: Написать падающий тест таблицы разделов**
+- [ ] **Step 2: Write a failing partition-table test**
 
 <!-- file: tools/test_slot.py -->
 ```python
@@ -152,12 +154,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 3: Убедиться, что тест падает**
+- [ ] **Step 3: Verify the test fails**
 
 Run: `python3 tools/test_slot.py`
 Expected: FAIL, `ModuleNotFoundError: No module named 'slot'`
 
-- [ ] **Step 4: Реализовать `slot.py`**
+- [ ] **Step 4: Implement `slot.py`**
 
 <!-- file: tools/slot.py -->
 ```python
@@ -284,12 +286,12 @@ if __name__ == "__main__":
 
 Run: `chmod +x tools/slot.py`
 
-- [ ] **Step 5: Убедиться, что тесты проходят**
+- [ ] **Step 5: Verify tests pass**
 
 Run: `python3 tools/test_slot.py`
-Expected: `OK`, 7 тестов.
+Expected: `OK`, 7 tests.
 
-- [ ] **Step 6: Коммит**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add .gitignore tools
@@ -298,15 +300,15 @@ git commit -m "build: add docker wrapper and side-by-side probe installer"
 
 ---
 
-### Task 2: Прошивка-проба
+### Task 2: Probe firmware
 
 **Files:**
 - Create: `prototypes/probe/CMakeLists.txt`, `prototypes/probe/sdkconfig.defaults`, `prototypes/probe/partitions.csv`, `prototypes/probe/main/CMakeLists.txt`, `prototypes/probe/main/main.cpp`
 
 **Interfaces:**
-- Produces: `prototypes/probe/build/probe.bin`. По USB-консоли каждые 5 секунд печатается блок строк от `PROBE-SUMMARY` до `PROBE-END`.
+- Produces: `prototypes/probe/build/probe.bin`. Every five seconds the USB console prints a block from `PROBE-SUMMARY` through `PROBE-END`.
 
-- [ ] **Step 1: Создать конфигурацию проекта**
+- [ ] **Step 1: Create the project configuration**
 
 <!-- file: prototypes/probe/CMakeLists.txt -->
 ```cmake
@@ -346,7 +348,7 @@ idf_component_register(
 )
 ```
 
-- [ ] **Step 2: Написать пробу**
+- [ ] **Step 2: Write the probe**
 
 <!-- file: prototypes/probe/main/main.cpp -->
 ```cpp
@@ -705,12 +707,12 @@ extern "C" void app_main() {
 }
 ```
 
-- [ ] **Step 3: Собрать**
+- [ ] **Step 3: Build**
 
 Run: `tools/idf.sh prototypes/probe set-target esp32s3 && tools/idf.sh prototypes/probe build`
-Expected: `Project build complete`, файл `prototypes/probe/build/probe.bin` меньше 0x100000 байт.
+Expected: `Project build complete`; `prototypes/probe/build/probe.bin` is smaller than 0x100000 bytes.
 
-- [ ] **Step 4: Коммит**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add prototypes
@@ -719,59 +721,59 @@ git commit -m "feat: add hardware probe firmware"
 
 ---
 
-### Task 3: Запуск пробы на устройстве (прототипы 1 и 2)
+### Task 3: Run the probe on hardware (prototypes 1 and 2)
 
 **Files:**
-- Modify: `docs/superpowers/specs/2026-11-09-groovebox-design.md` (раздел «Результаты прототипов»)
+- Modify: `docs/superpowers/specs/2026-11-09-groovebox-design.md` (Prototype results section)
 
-- [ ] **Step 1: Убедиться, что microSD вставлена в Cardputer**
+- [ ] **Step 1: Verify that microSD is inserted in the Cardputer**
 
-Спросить пользователя. Проба создаёт только папку `/groovebox_probe` и в ней `mic.raw`.
+Ask the user. The probe creates only `/groovebox_probe` and `mic.raw` inside it.
 
-- [ ] **Step 2: Установить пробу**
+- [ ] **Step 2: Install the probe**
 
 Run: `python3 tools/slot.py install prototypes/probe/build/probe.bin`
-Expected: три записи с `Hash of data verified`. Экран устройства останется тёмным, это нормально.
+Expected: three `Hash of data verified` messages. The device screen stays dark; this is normal.
 
-- [ ] **Step 3: Запустить чтение консоли и попросить пользователя говорить**
+- [ ] **Step 3: Read the console and ask the user to speak**
 
-Сначала сообщить пользователю: примерно через 10 секунд раздастся тон на 3 секунды, потом 15 секунд записи (нужно говорить в микрофон на фоне тихого тона), потом воспроизведение последних 5 секунд.
+Tell the user first: after about ten seconds, a tone plays for three seconds, followed by fifteen seconds of recording (speak into the microphone over the quiet tone), then playback of the last five seconds.
 
 Run: `stty -F /dev/ttyACM0 115200 raw -echo && timeout 60 cat /dev/ttyACM0 | tee .tmp/probe.log`
-Expected: блок от `PROBE-SUMMARY` до `PROBE-END`.
+Expected: a block from `PROBE-SUMMARY` through `PROBE-END`.
 
-- [ ] **Step 4: Оценить результаты**
+- [ ] **Step 4: Evaluate results**
 
-| Проверка | Условие успеха | Если не выполнено |
+| Check | Success criterion | If unsuccessful |
 |---|---|---|
-| `audio_init` | 1 | Отладить инициализацию кодека до продолжения |
-| Тон | Пользователь слышал тон | Отладить вывод |
-| `BENCH voices=8` | `load` не выше 50 % | Перейти на 22,05 кГц или уменьшить пул голосов |
-| `SD mount` | Нет сообщения об ошибке | Спросить пользователя, вставлена ли карта; разобрать ошибку |
-| `written` и `expected` | Совпадают | Увеличить буфер или снизить нагрузку SD |
-| `dropped_blocks`, `tx_overflows`, `rx_overflows` | Все 0 | Запись с микрофона только на остановленном треке |
-| `mic_rms` | Хотя бы один канал заметно выше тишины, запись разборчива по словам пользователя | Изменить усиление 0x14 или канал |
-| `max_sd_write_ms` | Записать значение | Размер буфера для этапа 7 |
+| `audio_init` | 1 | Debug codec initialization before continuing |
+| Tone | User heard it | Debug output |
+| `BENCH voices=8` | `load` at most 50% | Switch to 22.05 kHz or reduce voices |
+| `SD mount` | No error | Ask whether the card is inserted; investigate the error |
+| `written` and `expected` | Match | Increase buffering or reduce SD load |
+| `dropped_blocks`, `tx_overflows`, `rx_overflows` | All zero | Permit microphone recording only while stopped |
+| `mic_rms` | At least one channel clearly above silence; user reports intelligible recording | Adjust gain 0x14 or the channel |
+| `max_sd_write_ms` | Record the value | Size the stage 7 buffer |
 
-- [ ] **Step 5: Записать результаты в спецификацию**
+- [ ] **Step 5: Record results in the specification**
 
-Добавить в спецификацию раздел:
+Add this section to the specification:
 
 ```markdown
-## Результаты прототипов
+## Prototype results
 
-- Дата проверки: <дата запуска>
-- Выбранная частота: <32 кГц или 22,05 кГц по условию BENCH>
-- Нагрузка: 8 голосов <значение>, 16 голосов <значение>
-- Одновременная запись и воспроизведение: <да или нет>, max_sd_write_ms <значение>
-- Канал микрофона: <left или right>, усиление 0x14 = <значение>
-- exFAT на карте пользователя: <смонтирован или нет>
+- Test date: <run date>
+- Selected rate: <32 kHz or 22.05 kHz according to BENCH>
+- Load: 8 voices <value>, 16 voices <value>
+- Simultaneous recording/playback: <yes/no>, max_sd_write_ms <value>
+- Microphone channel: <left/right>, gain 0x14 = <value>
+- exFAT on the user card: <mounted/not mounted>
 ```
 
-- [ ] **Step 6: Вернуть GLIDE и закоммитить**
+- [ ] **Step 6: Restore GLIDE and commit**
 
 Run: `python3 tools/slot.py remove-probe`
-Expected: две записи с `Hash of data verified`, устройство запускает GLIDE.
+Expected: two `Hash of data verified` messages; the device boots GLIDE.
 
 ```bash
 git add docs
@@ -780,18 +782,18 @@ git commit -m "docs: record hardware probe results"
 
 ---
 
-### Task 4: Установка с разделом сэмплов через Launcher (прототип 3)
+### Task 4: Launcher installation with a sample partition (prototype 3)
 
 **Files:**
 - Create: `tools/package.py`
 - Test: `tools/test_package.py`
-- Modify: `docs/superpowers/specs/2026-11-09-groovebox-design.md` (раздел «Результаты прототипов»)
+- Modify: `docs/superpowers/specs/2026-11-09-groovebox-design.md` (Prototype results section)
 
 **Interfaces:**
-- Consumes: `prototypes/probe/build/` из Задачи 2.
-- Produces: `prototypes/probe/build/probe-package.bin`, образ для загрузки через WebUI Launcher.
+- Consumes: `prototypes/probe/build/` from Task 2.
+- Produces: `prototypes/probe/build/probe-package.bin`, an image for Launcher WebUI upload.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tools/test_package.py -->
 ```python
@@ -821,12 +823,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `python3 tools/test_package.py`
 Expected: FAIL, `ModuleNotFoundError: No module named 'package'`
 
-- [ ] **Step 3: Реализовать упаковку**
+- [ ] **Step 3: Implement packaging**
 
 <!-- file: tools/package.py -->
 ```python
@@ -862,25 +864,25 @@ if __name__ == "__main__":
     main(sys.argv[1])
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят, и собрать образ**
+- [ ] **Step 4: Verify tests pass and build the image**
 
 Run: `python3 tools/test_package.py && python3 tools/package.py prototypes/probe/build`
-Expected: `OK`, 3 теста; появился `prototypes/probe/build/probe-package.bin`.
+Expected: `OK`, 3 tests; `prototypes/probe/build/probe-package.bin` exists.
 
-- [ ] **Step 5: Установить через WebUI вместе с пользователем**
+- [ ] **Step 5: Install through WebUI with the user**
 
-Попросить пользователя: открыть **WUI → my Network** на Cardputer, затем `http://launcher.local` (`admin` / `launcher`), нажать **↑ OTA**, выбрать `prototypes/probe/build/probe-package.bin` и подтвердить установку.
+Ask the user to open **WUI → my Network** on Cardputer, visit `http://launcher.local` (`admin` / `launcher`), choose **↑ OTA**, select `prototypes/probe/build/probe-package.bin` and confirm installation.
 
-- [ ] **Step 6: Прочитать результат**
+- [ ] **Step 6: Read the result**
 
 Run: `stty -F /dev/ttyACM0 115200 raw -echo && timeout 60 cat /dev/ttyACM0 | tee .tmp/probe-launcher.log`
-Expected: `FLASH label=<метка> offset=<адрес> size=0x400000 mmap_ok=1`.
+Expected: `FLASH label=<label> offset=<address> size=0x400000 mmap_ok=1`.
 
-Если размер меньше 0x400000 или строки нет, использовать запасной вариант из спецификации: раздел сэмплов создаётся при прошивке по кабелю.
+If size is below 0x400000 or the line is absent, use the specified fallback: create the sample partition during cable installation.
 
-- [ ] **Step 7: Записать результат и убрать пробу**
+- [ ] **Step 7: Record the result and remove the probe**
 
-Дописать в раздел «Результаты прототипов» строку `Раздел сэмплов через Launcher: <работает или нет>, размер <значение>`. Попросить пользователя удалить приложение пробы в меню Launcher и убедиться, что GLIDE запускается.
+Append `Sample partition through Launcher: <works/does not work>, size <value>` to Prototype results. Ask the user to remove the probe in Launcher and confirm that GLIDE boots.
 
 ```bash
 git add tools docs
@@ -889,16 +891,16 @@ git commit -m "feat: verify samples partition install through Launcher"
 
 ---
 
-### Task 5: Модель проекта, сетка и свинг
+### Task 5: Project model, grid and swing
 
 **Files:**
 - Create: `Makefile`, `components/gb_core/include/gb/model.h`, `tests/test.h`, `tests/main.cpp`
 - Test: `tests/test_model.cpp`
 
 **Interfaces:**
-- Produces: `gb::Grid`, `gb::gridTicks(Grid)`, `gb::patternTicks(length, Grid)`, `gb::swingOffset(step, Grid, swing)`, структуры `DrumPattern`, `Note`, `InstrumentPattern`, `Scene`, `SongEntry`, `Project`.
+- Produces: `gb::Grid`, `gb::gridTicks(Grid)`, `gb::patternTicks(length, Grid)`, `gb::swingOffset(step, Grid, swing)`, and structures `DrumPattern`, `Note`, `InstrumentPattern`, `Scene`, `SongEntry`, `Project`.
 
-- [ ] **Step 1: Создать сборку тестов**
+- [ ] **Step 1: Create the test build**
 
 <!-- file: Makefile -->
 ```make
@@ -972,7 +974,7 @@ int main() {
 }
 ```
 
-- [ ] **Step 2: Написать падающий тест**
+- [ ] **Step 2: Write a failing test**
 
 <!-- file: tests/test_model.cpp -->
 ```cpp
@@ -1030,12 +1032,12 @@ TEST(newProjectIsEmptyAndStraight) {
 }
 ```
 
-- [ ] **Step 3: Убедиться, что тест падает**
+- [ ] **Step 3: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/model.h: No such file or directory`.
+Expected: compilation error, `gb/model.h: No such file or directory`.
 
-- [ ] **Step 4: Реализовать модель**
+- [ ] **Step 4: Implement the model**
 
 <!-- file: components/gb_core/include/gb/model.h -->
 ```cpp
@@ -1124,12 +1126,12 @@ struct Project {
 }  // namespace gb
 ```
 
-- [ ] **Step 5: Убедиться, что тесты проходят**
+- [ ] **Step 5: Verify tests pass**
 
 Run: `make test`
 Expected: `7 tests, 0 failures`
 
-- [ ] **Step 6: Коммит**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add Makefile components tests
@@ -1138,17 +1140,17 @@ git commit -m "feat: add project model with selectable grid and swing"
 
 ---
 
-### Task 6: Секвенсор
+### Task 6: Sequencer
 
 **Files:**
 - Create: `components/gb_core/include/gb/sequencer.h`, `components/gb_core/src/sequencer.cpp`
 - Test: `tests/test_sequencer.cpp`
 
 **Interfaces:**
-- Consumes: всё из `gb/model.h` (Задача 5).
+- Consumes: everything in `gb/model.h` (Task 5).
 - Produces: `gb::Sequencer(const Project&, uint32_t sampleRate)`, `playScene(uint8_t)`, `playSong(uint8_t)`, `stop()`, `playing()`, `render(uint32_t frames, Event* out, uint32_t capacity) -> uint32_t`; `gb::Event { uint32_t frame; EventType type; uint8_t track; uint8_t data; uint8_t velocity; }`; `EventType { DrumHit, NoteOn, NoteOff, AllNotesOff }`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [ ] **Step 1: Write a failing test**
 
 <!-- file: tests/test_sequencer.cpp -->
 ```cpp
@@ -1387,12 +1389,12 @@ TEST(eventsBeyondCapacityAreDropped) {
 }
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [ ] **Step 2: Verify the test fails**
 
 Run: `make test`
-Expected: ошибка компиляции, `gb/sequencer.h: No such file or directory`.
+Expected: compilation error, `gb/sequencer.h: No such file or directory`.
 
-- [ ] **Step 3: Реализовать секвенсор**
+- [ ] **Step 3: Implement the sequencer**
 
 <!-- file: components/gb_core/include/gb/sequencer.h -->
 ```cpp
@@ -1638,12 +1640,12 @@ uint32_t Sequencer::render(uint32_t frames, Event* out, uint32_t capacity) {
 }  // namespace gb
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [ ] **Step 4: Verify tests pass**
 
 Run: `make test`
 Expected: `21 tests, 0 failures`
 
-- [ ] **Step 5: Коммит**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add components tests

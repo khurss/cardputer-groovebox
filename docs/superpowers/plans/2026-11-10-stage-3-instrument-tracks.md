@@ -1,295 +1,296 @@
-# Groovebox: этап 3, инструментальные дорожки. План реализации
+# Groovebox stage 3: instrument tracks implementation plan
 
-Дата: 2026-11-10. Статус: выполнено; итоговые проверки на ПК и Cardputer пройдены.
+Date: 2026-11-10. Status: completed; final host and Cardputer checks passed.
+This is a historical plan. See the [current synth guide](../../stage-3.md) for controls.
 
-**Цель:** поверх существующей драм-машины можно сыграть синт с клавиатуры, записать
-полифоническую партию в цикл, поправить ноты в пианоролле и сохранить проект на SD.
+**Goal:** play a synth from the keyboard over the existing drum machine, record a
+polyphonic loop, edit notes in a piano roll and save the project to SD.
 
-**Основание:** `docs/superpowers/specs/2026-11-09-groovebox-design.md`,
-`docs/superpowers/plans/stage-3-notes.md` и замечания к этапу 3 из `stage-2-notes.md`.
-Исходная ревизия: `60fd8a5`. До изменений проходят 122 теста C++ с ASan/UBSan и 40 тестов Python.
+**Basis:** [design specification](../specs/2026-11-09-groovebox-design.md),
+[stage 3 review notes](stage-3-notes.md) and stage 3 findings in
+[stage 2 notes](stage-2-notes.md). Baseline revision: `60fd8a5`; before changes,
+122 C++ tests with ASan/UBSan and 40 Python tests passed.
 
-## Результат для пользователя
+## User outcome
 
-- Четыре инструментальные дорожки, по 16 паттернов и до 64 нот в каждом.
-- Общий пул с целью 8 голосов: sine, triangle, saw, square, ADSR, резонансный low-pass,
-  glide. Итоговое число голосов определяется замером на устройстве вместе со всеми ударными.
-- Игра аккордами при остановленном и запущенном транспорте, две октавы на клавиатуре.
-- Запись поверх цикла с выравниванием по выбранной сетке либо без выравнивания.
-- Пианоролл: добавление, выбор, удаление, изменение высоты, начала, длины и силы ноты.
-- Копирование и вставка инструментального паттерна, отмена последней правки или прохода записи.
-- Параметры синта и записанные партии переживают перезагрузку; проекты этапа 2 загружаются.
+- Four instrument tracks, 16 patterns each, up to 64 notes per pattern.
+- A shared pool targeting eight voices: sine, triangle, saw, square, ADSR, resonant
+  low-pass and glide. Final capacity depends on device measurements with all drums.
+- Chords with transport stopped or playing, with two keyboard octaves.
+- Overdub recording with the selected grid or quantize off.
+- Piano roll: add, select, delete, change pitch/start/length/velocity.
+- Pattern copy/paste and undo of the last edit or recording pass.
+- Synth parameters and parts survive reboot; stage 2 projects still load.
 
-## Ограничения и решения
+## Constraints and decisions
 
-- Сохраняются 32 кГц, 16 бит, моно и аудиоблок 256 кадров. Во время игры нет выделений памяти,
-  файловых операций и ожидания интерфейса в аудиозадаче.
-- `audioProject` принадлежит аудиозадаче, `uiProject` — интерфейсу. Экран не читает
-  изменяемую модель аудиозадачи. Команды идут через SPSC; результаты записи — через отдельную
-  SPSC в обратную сторону. Изменение модели не становится общим для двух ядер.
-- В `Command` не добавляется целый `InstrumentPattern`. Для одиночной правки достаточно
-  одной `Note`; для вставки/отмены используется транзакция из точечных команд.
-- Живые нажатия обрабатываются на следующем аудиоблоке: разрешение записи — 96 PPQN,
-  дополнительная задержка обработки — до 8 мс без учёта очереди вывода I2S и опроса клавиатуры.
-  «Без выравнивания» сохраняет тики, а не округляет их к шагам редактора.
-- Запись ведёт аудиозадача по собственному времени секвенсора. Частота перерисовки и задержки
-  SD не определяют длину нот. Удержания связываются с физической клавишей, а не с текущей октавой.
-- До этапа 4 для совместной игры используется сцена 0: выбранный паттерн каждой дорожки
-  назначается в неё. Изменение назначения освобождает голоса затронутой дорожки.
-- Смена сетки инструмента сохраняет абсолютные начала и длины нот. Поскольку длительность
-  паттерна всё ещё равна `length * gridTicks`, ноты за его новым концом сохраняются, но не играют.
-  При возвращении длины/сетки они снова доступны. Редактор показывает наличие скрытых нот.
-- Максимум модели: начало 0..1535, длина 1..1536 тиков, MIDI pitch 0..127, velocity 1..127.
-  Новая нота начинается внутри текущего цикла и длится не больше одного цикла. Сохранённые ноты
-  могут выходить за текущую длину после смены сетки; загрузчик не удаляет их.
-- Для записанной ноты через конец цикла сохраняются начало по модулю длины паттерна и положительная
-  длительность. Удержание дольше цикла ограничивается одним циклом, без повторного добавления нот.
-- Сцены/песня как отдельные экраны, микшер/эффекты и сэмплер остаются следующими этапами.
+- Retain 32 kHz, 16-bit mono and 256-frame audio blocks. No allocation, file I/O or
+  waiting for UI in the audio task during playback.
+- The audio task owns `audioProject`; UI owns `uiProject`. Display code does not
+  read the mutable audio model. Commands use SPSC; recording results return over
+  a separate SPSC. Model mutation is not shared across cores.
+- Do not add a full `InstrumentPattern` to `Command`. Single edits use one Note;
+  paste/undo uses a transaction of individual commands.
+- Live keys apply at the next block: recording resolution 96 PPQN and up to 8 ms
+  processing latency, excluding I2S output queues and keyboard polling. Quantize
+  off preserves ticks instead of rounding to editor steps.
+- The audio task records using sequencer time; redraw rate and SD latency do not
+  determine note lengths. Holds bind to physical keys, not the current octave.
+- Until stage 4, selected track patterns are assigned to scene 0 for combined
+  playback. Changing assignment releases voices on that track.
+- Instrument-grid changes retain absolute starts/lengths. Pattern duration remains
+  `length * gridTicks`, so notes beyond the new end remain stored but silent.
+  Restoring length/grid makes them available again; the editor marks hidden notes.
+- Model limits: start 0–1535, length 1–1536 ticks, MIDI pitch 0–127, velocity 1–127.
+  New notes start inside the current loop and last no more than one loop. Loading
+  does not discard notes beyond a shortened pattern.
+- A recorded note crossing the loop end stores start modulo pattern length and a
+  positive duration. Holds longer than one loop are capped at one loop without
+  repeatedly adding notes.
+- Separate Scenes/Song views, mixer/effects and sampler are later stages.
 
-## Предлагаемое управление
+## Proposed controls at this stage
 
-Все сочетания используют существующие физические коды клавиатуры; прошивка переводит
-подписанные стрелки через `Fn`, не ожидая от контроллера отдельных arrow keycodes.
+Use existing physical keyboard codes. Firmware translates printed arrows via Fn
+rather than expecting dedicated arrow keycodes from the controller.
 
-| Клавиши | Действие на экране инструмента |
+| Keys | Instrument-screen action |
 |---|---|
-| `Tab`, `Fn+1`, `Fn+2` | Переключение ударных/инструмента, прямой выбор экрана |
-| `Space` | Общий запуск/остановка |
-| `Alt` | Включить/выключить запись; на остановке только вооружает запись |
-| `z x c v b n m ,` | Белые клавиши нижней октавы, от C до следующего C |
-| `s d g h j` | Чёрные клавиши нижней октавы |
-| `q w e r t y u i` | Белые клавиши следующей октавы |
-| `2 3 5 6 7` | Чёрные клавиши следующей октавы |
-| `-`, `=` | Октава вниз/вверх с ограничением MIDI-диапазона |
-| `Fn+[` / `Fn+]` | Предыдущая/следующая инструментальная дорожка |
-| `[` / `]` | Предыдущий/следующий паттерн этой дорожки |
-| `Fn+стрелки` | Курсор по времени и высоте; у выбранной ноты — правка начала/высоты |
-| `Enter` | Выбрать ноту под курсором или добавить новую |
-| `Fn+Enter` | Снять выбор; повторный выбор перебирает совпадающие ноты |
-| `Backspace` | Удалить выбранную ноту |
-| `Shift+Fn+←/→` | Уменьшить/увеличить длину выбранной ноты |
-| `Shift+Fn+↑/↓` | Увеличить/уменьшить velocity выбранной ноты |
-| `Fn+l`, `Fn+g`, `Fn+w` | Длина паттерна, сетка, общий свинг |
-| `Fn+q` | Выравнивание записи: сетка паттерна / выключено |
-| `Fn+c`, `Fn+v`, `Fn+z` | Копировать, вставить, отменить |
-| `Fn+s` | Параметры синта: выбор поля и изменение стрелками |
+| Tab, Fn+1, Fn+2 | Switch Drums/Instrument or select directly |
+| Space | Global start/stop |
+| Alt | Toggle recording; while stopped, arm only |
+| z x c v b n m , | Lower-octave white keys, C through next C |
+| s d g h j | Lower-octave black keys |
+| q w e r t y u i | Next-octave white keys |
+| 2 3 5 6 7 | Next-octave black keys |
+| −, = | Octave down/up within MIDI range; later moved to Fn+−/+ |
+| Fn+[ / Fn+] | Previous/next instrument track |
+| [ / ] | Previous/next pattern |
+| Fn+arrows | Time/pitch cursor; selected-note start/pitch edits |
+| Enter | Select under cursor or add a note |
+| Fn+Enter | Deselect; repeated selection cycles overlapping notes |
+| Backspace | Delete selected note |
+| Shift+Fn+←/→ | Decrease/increase note length |
+| Shift+Fn+↑/↓ | Increase/decrease velocity |
+| Fn+L, Fn+G, Fn+W | Length, grid, global swing |
+| Fn+Q | Recording quantize: pattern grid / off |
+| Fn+C, Fn+V, Fn+Z | Copy, paste, undo |
+| Fn+S | Synth parameters, selected/adjusted with arrows |
 
-На экране ударных сохраняется существующее управление. В режиме параметров ноты
-освобождаются, и стрелки редактируют выбранный параметр. При смене экрана, дорожки или
-паттерна активная запись завершается, живые голоса освобождаются, вооружение снимается.
+Keep existing drum controls. Parameter mode releases notes and uses arrows for the
+selected parameter. Changing screen/track/pattern finishes recording, releases live
+voices and disarms recording.
 
-## Задача 1. Модель, валидация и точечные команды
+## Task 1. Model, validation and individual commands
 
-**Файлы:** `model.h`, `commands.h/.cpp`, `validate.h/.cpp` в `components/gb_core/`;
+**Files:** `model.h`, `commands.h/.cpp`, `validate.h/.cpp` in `components/gb_core/`;
 `tests/test_instrument_model.cpp`, `tests/test_validate.cpp`, `tests/test_commands.cpp`.
 
-- [x] Добавить `Waveform`, компактный `SynthSound` на каждую из четырёх дорожек и настройку
-  выравнивания записи на дорожку. Параметры: waveform, attack, decay, sustain, release,
-  cutoff, resonance, glide, level; значения контроллеров 0..127, waveform — проверяемый enum.
-- [x] Задать детерминированные начальные параметры и пределы преобразования в DSP:
-  attack/decay 0..2 с, release 0..4 с, glide 0..1 с, cutoff 100..12000 Гц.
-  Максимум resonance ограничить устойчивым диапазоном выбранного фильтра.
-- [x] Проверять границы нот, параметры `DrumSound`, velocity всех шагов и параметры синта
-  при загрузке и применении правок. Нулевую длину и нулевую velocity активной ноты отклонять.
-- [x] Добавить Add/Set/Delete/ClearNote, длину/сетку инструмента и SetSynthParam.
-  Проверять не только диапазон полей команды, но и `noteCount`/индекс в целевом паттерне.
-  Некорректная операция оставляет модель целой.
-- [x] Отделить LiveNoteOn/LiveNoteOff, включение записи и остановку живых нот от команд правки.
-  Номер дорожки в событиях: 1..4; индекс массива инструментов: 0..3. Проверить преобразования.
-- [x] Для массовой правки ввести Begin/Set/Commit/Cancel с одним фиксированным staging-паттерном
-  в движке. Проверка и замена происходят целиком на Commit; незавершённая транзакция не звучит.
-- [x] Ограничить `sizeof(Command)` проверкой сборки: небольшая нота делит payload с существующим
-  `DrumPattern`, а не увеличивает каждую ячейку очереди на 388 байт.
+- [x] Add `Waveform`, compact per-track `SynthSound`, and per-track recording quantize.
+  Parameters: waveform, attack, decay, sustain, release, cutoff, resonance, glide,
+  level. Controllers use 0–127; validate waveform as an enum.
+- [x] Define deterministic defaults and DSP ranges: attack/decay 0–2 s, release
+  0–4 s, glide 0–1 s, cutoff 100–12000 Hz. Limit resonance to a stable filter range.
+- [x] Validate note bounds, `DrumSound`, step velocities and synth parameters on
+  load/edit. Reject zero-length and zero-velocity active notes.
+- [x] Add Add/Set/Delete/ClearNote, instrument length/grid and SetSynthParam.
+  Validate command fields and target `noteCount`/index; invalid operations leave
+  the model intact.
+- [x] Separate LiveNoteOn/LiveNoteOff, record enable and live stop from edit commands.
+  Event track numbers are 1–4; instrument array indices are 0–3. Test conversion.
+- [x] Add Begin/Set/Commit/Cancel bulk edits with one fixed staging pattern in the
+  engine. Validate/replace atomically at Commit; incomplete transactions do not play.
+- [x] Enforce `sizeof(Command)` at build time: a small note shares payload storage
+  with `DrumPattern` rather than adding 388 bytes to every queue entry.
 
-**Проверка:** границы всех новых команд, 64-я/65-я нота, недопустимые параметры,
-частично переданная транзакция, одинаковый результат правок в двух копиях проекта.
+**Checks:** all command boundaries, 64th/65th note, invalid parameters, partial
+transactions and identical results in both project copies.
 
-## Задача 2. Сохранения v2 и освобождение памяти
+## Task 2. File v2 and memory savings
 
-**Файлы:** `project_io.h/.cpp`, `tests/test_project_io.cpp`; небольшой fixture проекта v1
-в `tests/fixtures/`, созданный по формату исходной ревизии.
+**Files:** `project_io.h/.cpp`, `tests/test_project_io.cpp`, and a small v1 fixture
+in `tests/fixtures/` generated using the baseline revision's format.
 
-- [x] Добавить формат v2 для параметров синта и выравнивания, сохранив явный побайтовый codec.
-- [x] Читать v1 с заполнением новых полей значениями по умолчанию; миграция проходит в памяти
-  и возвращает успешную загрузку. Файл меняется только при обычном успешном сохранении.
-- [x] Проверять CRC, размер, версию и всю модель до изменения `out`. Неизвестные версии
-  продолжают возвращать BadVersion; повреждённый проект не превращается в пустой успешный.
-- [x] Удалить отдельный статический `Project verified`: проверять временный/основной файл
-  через общий декодер и существующий scratch. Сохранить гарантию неизменности `out` при ошибке.
-- [x] Сохранить схему `.tmp` → проверка → `.bak` → основной файл и защиту LOAD ERR/BACKUP.
-  Исправный файл v1 должен считаться допустимым кандидатом для резервной копии.
-- [x] Проверить, что v2 помещается в `kProjectBufferSize`; добавить тест фактического размера.
+- [x] Add v2 synth/quantize fields while retaining an explicit bytewise codec.
+- [x] Read v1 with defaults for new fields. Migrate in memory and return success;
+  modify the file only through a normal successful save.
+- [x] Validate CRC, size, version and full model before changing `out`. Unknown
+  versions remain BadVersion; corruption must not become a successful empty project.
+- [x] Remove static `Project verified`; validate temporary/primary files through
+  the shared decoder and existing scratch, retaining unchanged `out` on failure.
+- [x] Keep `.tmp` → verification → `.bak` → primary and LOAD ERR/BACKUP protection.
+  A valid v1 file is a valid backup candidate.
+- [x] Verify v2 fits `kProjectBufferSize`; test the actual serialized size.
 
-**Проверка:** неизменный fixture v1 → миграция → v2 → повторная загрузка; все параметры и ноты,
-повреждения/обрезка обеих версий, резервный файл другой поддерживаемой версии, исходный файл
-после неудачного сохранения. Новое поле в модели и миграция входят в один законченный набор изменений.
+**Checks:** unchanged v1 fixture → migration → v2 → reload; every parameter/note;
+corrupt/truncated versions; backup in another supported version; original file after
+failed saving. Ship model fields and migration together.
 
-## Задача 3. Снятие нот и вместимость событий
+## Task 3. Note release and event capacity
 
-**Файлы:** `sequencer.h/.cpp`, `engine.h`, `tests/test_sequencer.cpp`.
+**Files:** `sequencer.h/.cpp`, `engine.h`, `tests/test_sequencer.cpp`.
 
-- [x] Заменить молчаливую потерю событий политикой с резервом для снятий и счётчиком переполнений.
-  При исчерпании резерва гарантировать AllNotesOff и прекращение новых NoteOn в остатке блока.
-  Даже тестовый маленький буфер не должен оставлять играющую ноту без будущего освобождения.
-- [x] Рассчитать фиксированный буфер для 256 кадров при 32 кГц и 240 BPM. За блок проходят
-  максимум четыре тика; четыре паттерна содержат до 256 нот и дают до 512 NoteOn/NoteOff,
-  плюс ударные и события освобождения. Взять консервативный запас и зафиксировать расчёт в коде.
-  При больших запросах Engine делит рендер на блоки ограниченного размера.
-- [x] Сохранять хронологию событий; на одном кадре снятия должны предшествовать новым нотам.
-- [x] Добавить runtime-идентичность ноты: дорожка, источник live/clip и token.
-  Повторное нажатие той же высоты и соседние ноты одного pitch не должны снимать чужой голос.
-- [x] Вычислять конец свингованной ноты в развёрнутом времени и только потом применять modulo.
-  Конец строго позже начала и не позже следующего старта этой же ноты в цикле.
-- [x] На stop, перезапуске песни и изменении играющего паттерна освобождать соответствующие
-  ноты. Учесть удаление ноты, изменение её pitch/длины, сетки и назначения сцены во время игры.
+- [x] Replace silent loss with a release reserve and overflow counter. If the reserve
+  is exhausted, guarantee AllNotesOff and suppress NoteOn for the rest of the block.
+  Even a tiny test buffer must not leave a sounding note without a future release.
+- [x] Size a fixed buffer for 256 frames at 32 kHz/240 BPM: at most four ticks per
+  block; four patterns can supply 256 notes and 512 NoteOn/NoteOff events, plus
+  drums/releases. Document conservative headroom in code. Engine splits large
+  requests into bounded blocks.
+- [x] Preserve chronological order; releases precede attacks on the same frame.
+- [x] Add runtime identity: track, live/clip source and token. Repeated same-pitch
+  keys and adjacent same-pitch notes must not release another voice.
+- [x] Calculate swung note ends in unwrapped time before modulo. End must be after
+  start and no later than the next occurrence of the same note.
+- [x] Release relevant notes on stop, song restart and playing-pattern edits,
+  including note deletion, pitch/length/grid edits and scene reassignment.
 
-**Проверка:** заполненные четыре паттерна, малый/нулевой буфер с последующим восстановлением,
-NoteOff без NoteOn, одинаковый pitch, граница цикла, полная длина цикла, `start=30, length=378,
-swing=75`, `playSong` во время игры, удаление удерживаемой ноты. Проверять пары событий по token.
+**Checks:** four full patterns; tiny/zero buffers and recovery; NoteOff without
+NoteOn; identical pitch; loop boundary/full-loop length; `start=30, length=378,
+swing=75`; `playSong` while playing; deleting a held note. Match events by token.
 
-## Задача 4. Синтезатор и общий пул голосов
+## Task 4. Synth and shared voice pool
 
-**Новые файлы:** `include/gb/synth.h`, `src/synth.cpp`, `tests/test_synth.cpp`,
-`tools/render_synth.cpp`. **Изменения:** `components/gb_core/CMakeLists.txt`, `Makefile`.
+**New:** `include/gb/synth.h`, `src/synth.cpp`, `tests/test_synth.cpp`,
+`tools/render_synth.cpp`. **Modify:** `components/gb_core/CMakeLists.txt`, `Makefile`.
 
-- [x] Реализовать четыре формы осциллятора, ADSR, устойчивый резонансный low-pass и glide.
-  Таблицы частот и дорогие коэффициенты вычислять при инициализации/изменении параметров,
-  не выполнять `pow`/`exp` для каждого голоса на каждом сэмпле.
-- [x] Реализовать фиксированный общий пул с начальной целью 8 голосов, а не по 8 на дорожку.
-  При заполнении уступает самый тихий голос, при равенстве — самый старый.
-- [x] Привязать снятие к token и источнику. Поздний NoteOff украденного голоса безопасно игнорируется.
-  Clip-AllNotesOff не снимает живые клавиши без явного общего stop.
-- [x] Реализовать освобождение всех голосов и короткое сглаживание при вынужденном перезапуске.
-  Отдельно обработать нулевые attack/decay/release без деления на ноль и зависшего sustain.
-- [x] Определить glide от последней сыгранной высоты дорожки к новой; старые полифонические
-  голоса продолжают звучать независимо. Параметры активного голоса меняются без сброса его фазы.
-- [x] Добавить `make render-synth`: WAV с формами волн, аккордом, фильтром и glide.
+- [x] Implement four oscillator shapes, ADSR, stable resonant low-pass and glide.
+  Compute frequency tables/expensive coefficients at initialization or parameter
+  change, not `pow`/`exp` per voice per sample.
+- [x] Implement a fixed shared pool initially targeting eight voices, not eight
+  per track. Steal quietest, with oldest breaking a tie.
+- [x] Bind releases to token/source. Ignore late NoteOff for a stolen voice.
+  Clip-AllNotesOff leaves live keys sounding unless explicitly stopped globally.
+- [x] Release all voices and briefly smooth forced retriggers. Handle zero
+  attack/decay/release without division by zero or stuck sustain.
+- [x] Glide from the track's last pitch to the new one; older polyphonic voices
+  remain independent. Active parameter changes retain oscillator phase.
+- [x] Add `make render-synth` for waveforms, chord, filter and glide WAV examples.
 
-**Проверка:** частота тона с допуском, этапы ADSR и конечная тишина, устойчивость крайних
-параметров на длинном рендере, отсутствие NaN/Inf, выбор уступающего голоса, независимость дорожек.
-Для WAV проверять измеримые свойства; не требовать побитового совпадения float между платформами.
+**Checks:** pitch tolerance, ADSR stages/eventual silence, long renders at extreme
+settings, no NaN/Inf, voice-stealing selection and track independence. Check
+measurable WAV properties rather than bit-identical floating point across platforms.
 
-## Задача 5. Подключение синта к движку
+## Task 5. Engine integration
 
-**Файлы:** `engine.h/.cpp`, `tests/test_engine.cpp`.
+**Files:** `engine.h/.cpp`, `tests/test_engine.cpp`.
 
-- [x] Обрабатывать NoteOn/NoteOff/AllNotesOff секвенсора в точном кадре события.
-- [x] Подключить живые команды, прослушивание при остановке и сумму ударных с синтом
-  к существующему мастер-лимитеру. Проверить диапазон итогового int16.
-- [x] Ограничить работу очереди за один аудиоблок фиксированным числом команд, чтобы поток
-  команд и вставка большого паттерна не вытесняли рендер. Stop/снятия не должны молча теряться.
-- [x] Публиковать транспорт, число активных голосов и счётчики через атомарные поля для UI
-  и тестов; не выдавать UI изменяемый `Project` и не читать поля секвенсора между ядрами напрямую.
+- [x] Process sequencer NoteOn/NoteOff/AllNotesOff at the exact event frame.
+- [x] Add live commands, stopped audition and combined drums/synths through the
+  existing master limiter. Verify final int16 range.
+- [x] Bound commands processed per block so command floods and large pastes cannot
+  displace rendering. Stop/releases must not silently disappear.
+- [x] Publish transport, active voices and counters atomically for UI/tests.
+  Do not expose mutable Project or read sequencer fields directly across cores.
 
-**Проверка:** синт звучит в заданном кадре, аккорд поверх всех ударных, live при stop/play,
-поздние снятия, общий stop, изменение звучащего паттерна и лимитер при максимальных уровнях.
+**Checks:** exact-frame synth attack, chord over all drums, live stop/play, late
+releases, global stop, playing-pattern edits and limiting at maximum levels.
 
-## Задача 6. Живая запись и возврат изменений интерфейсу
+## Task 6. Live recording and returning edits to UI
 
-**Новые файлы:** `include/gb/recorder.h`, `src/recorder.cpp`, `tests/test_recorder.cpp`.
-**Изменения:** `engine.h/.cpp`, описание сообщений очередей, CMake компонента.
+**New:** `include/gb/recorder.h`, `src/recorder.cpp`, `tests/test_recorder.cpp`.
+**Modify:** `engine.h/.cpp`, queue-message definitions and component CMake.
 
-- [x] Реализовать состояния off/armed/recording: Alt на остановке вооружает, Space начинает
-  воспроизведение и запись; Alt во время игры сразу начинает/завершает запись в выбранный паттерн.
-- [x] При NoteOn сохранить дорожку, паттерн, физическую клавишу/token, pitch и развёрнутое время.
-  Мониторинг начинается сразу. NoteOff завершает соответствующую ноту даже после смены октавы.
-- [x] Квантизовать начало и конец к ближайшей линии текущей сетки, при равенстве — вперёд;
-  вычислять длительность до сворачивания времени в цикл. Минимум — один тик, максимум — цикл.
-  Быстрое нажатие после округления сохраняется как положительная нота.
-- [x] Резервировать место под записываемую ноту уже на NoteOn. При заполнении паттерна
-  мониторинг остаётся, новые ноты не записываются, UI получает NOTE FULL.
-- [x] Добавлять завершённую ноту в `audioProject` и возвращать точную принятую правку в UI
-  через обратную SPSC. UI применяет её без повторной отправки в движок и увеличивает editCount.
-  Новая нота вступает в воспроизведение со следующего прохождения её начала: завершение
-  короткого нажатия в том же блоке не должно повторно запускать уже прослушанную живую ноту.
-- [x] На время записи закрепить целевой паттерн и запретить его структурные правки; перед
-  сменой цели завершить удержания и получить подтверждение. Правки ударных остаются доступны.
-- [x] Обосновать вместимость обратной очереди: до 64 завершений плюс подтверждения состояния
-  за один сеанс. Следующий сеанс допускается после приёма результатов предыдущего; аудиозадача
-  никогда не ждёт свободного места. Непринятые результаты удерживаются в фиксированном буфере.
-- [x] На stop/выход из записи завершить удержания, передать все результаты и только после
-  подтверждения разрешить сохранение. Одна отмена возвращает состояние до сеанса записи.
+- [x] Implement off/armed/recording. Alt while stopped arms; Space starts playback
+  and recording. Alt while playing starts/finishes recording in the target pattern.
+- [x] On NoteOn, retain track, pattern, physical key/token, pitch and unwrapped time.
+  Monitor immediately. NoteOff finishes the matching note even after octave changes.
+- [x] Quantize start/end to the nearest grid line, ties forward. Calculate duration
+  before wrapping into the loop; minimum one tick, maximum one loop. A quick tap
+  rounded to one position still produces positive duration.
+- [x] Reserve note capacity at NoteOn. When full, retain monitoring, stop accepting
+  new recorded notes and notify UI with NOTE FULL.
+- [x] Add completed notes to `audioProject` and return exact accepted edits through
+  reverse SPSC. UI applies without resending and increments editCount. Playback
+  begins at the next traversal of the new start; finishing a short tap in the
+  same block must not retrigger its already-monitored live note.
+- [x] Lock the recording target against structural edits; finish holds and receive
+  acknowledgement before changing it. Drum editing remains available.
+- [x] Justify reverse-queue capacity: up to 64 completions plus state acknowledgements
+  per pass. Admit a new pass after the previous results are consumed. Audio never
+  waits for space; pending results remain in a fixed buffer.
+- [x] On stop/record exit, finish holds, return all results and allow save only after
+  acknowledgement. One undo restores the pre-pass state.
 
-**Проверка:** аккорд, короткая нота, граница цикла, удержание дольше цикла, оба режима выравнивания,
-полный паттерн, stop с зажатыми клавишами, поздний release, медленный UI, заполненная очередь,
-совпадение двух моделей после подтверждения и отсутствие двойной ноты от мониторинга.
+**Checks:** chords, short notes, loop crossing, long holds, both quantize modes,
+full pattern, stop with held keys, late releases, slow UI/full queues, matching
+models after acknowledgement and no duplicate monitoring note.
 
-## Задача 7. Общий интерфейс и пианоролл
+## Task 7. Shared UI and piano roll
 
-**Новые файлы:** `include/gb/ui.h`, `src/ui.cpp`, `include/gb/instrument_ui.h`,
+**New:** `include/gb/ui.h`, `src/ui.cpp`, `include/gb/instrument_ui.h`,
 `src/instrument_ui.cpp`, `tests/test_ui.cpp`.
-**Изменения:** `drum_ui.h/.cpp`, `tests/test_drum_ui.cpp`, CMake компонента.
+**Modify:** `drum_ui.h/.cpp`, `tests/test_drum_ui.cpp`, component CMake.
 
-- [x] Вынести Canvas, коды клавиш и CommandSink в общий заголовок. Добавить AppUi,
-  который владеет экраном, модификаторами, общим транспортом, предупреждениями и учётом правок.
-  Два экрана не должны держать независимые флаги play/stop и перехватывать чужие сочетания.
-- [x] Реализовать таблицу пианино из раздела управления, отсечение MIDI-границ и хранение
-  нажатых физических клавиш. Повторный keydown не создаёт второе удержание; отпускание всегда
-  использует сохранённые pitch/track/token, в том числе после нажатия Fn или Shift.
-- [x] Рисовать пианоролл 240×135: шапка дорожки/паттерна, PLAY/REC/ARM, сетка, окно высот,
-  курсор, выбранная нота и плейхед. Длинную ноту через конец цикла показывать двумя отрезками.
-  Высоты прокручиваются вслед за курсором; нижняя строка показывает pitch/length/velocity.
-- [x] Реализовать правку по таблице управления, показывать счётчик нот и предел заполнения.
-  При quantize off шаг курсора остаётся сеткой редактирования, а записанные ноты не сдвигаются.
-- [x] Добавить локальную копию одного паттерна для clipboard и одного для undo, без `Project`
-  в истории. Вставка/отмена передаются транзакцией из задачи 1; UI применяет результат целиком.
-- [x] Реализовать экран параметров синта и неналезающие друг на друга предупреждения о SD,
-  загрузке, записи и скрытых нотах. Новые экранные сценарии проверять через тестовый Canvas.
+- [x] Move Canvas, keycodes and CommandSink into a common header. Add AppUi owning
+  screen, modifiers, shared transport, warnings and edit tracking. Screens must
+  not maintain independent play flags or intercept each other's shortcuts.
+- [x] Implement the proposed piano mapping, MIDI clipping and physical-key holds.
+  Repeated keydown does not add a second hold; release uses stored pitch/track/token
+  even after Fn/Shift changes.
+- [x] Draw a 240×135 piano roll with track/pattern header, PLAY/REC/ARM, grid, pitch
+  window, cursor, selection and playhead. Show loop-crossing notes as two segments.
+  Pitch scrolls with the cursor; the footer shows pitch/length/velocity.
+- [x] Implement the control table and note-count/full indicators. With quantize
+  off, cursor movement retains the editor grid without shifting recorded notes.
+- [x] Keep one clipboard and one undo pattern locally, not Project copies in history.
+  Paste/undo uses task 1 transactions; UI applies the result as a whole.
+- [x] Add synth parameters and non-overlapping SD/load/record/hidden-note warnings.
+  Test new display scenarios through a test Canvas.
 
-**Проверка:** все сочетания и их приоритеты, обе октавы и аккорды, смена октавы при удержании,
-переключение экранов/дорожек, границы курсора, одинаковые ноты под курсором, copy/paste/undo,
-отмена прохода записи, исходные сценарии DrumUi и геометрия в пределах дисплея.
+**Checks:** shortcut priority, both octaves/chords, octave changes while holding,
+screen/track changes, cursor bounds, overlapping notes, copy/paste/undo, recording
+pass undo, original DrumUi scenarios and display bounds.
 
-## Задача 8. Прошивка и диагностическая консоль
+## Task 8. Firmware and diagnostic console
 
-**Файлы:** `firmware/main/main.cpp`, при необходимости `hardware.h/.cpp`;
+**Files:** `firmware/main/main.cpp`, `hardware.h/.cpp` as needed;
 `tools/device_test.py`, `tools/test_device_test.py`.
 
-- [x] Подключить AppUi и обратную очередь результатов записи. Сначала принимать результаты,
-  затем обрабатывать сохранение; SD не запускается до завершения синхронизации записанных нот.
-- [x] Общий editCount и запрос сохранения учитывать на обоих экранах. Сохранить автосохранение
-  остановленного проекта через 3 секунды и защиту неподдерживаемого/повреждённого файла.
-- [x] Сохранить `K` как полное нажатие для старого теста. Добавить раздельные keydown/keyup,
-  модификаторы Alt/Ctrl, состояние инструмента, список нот и параметры синта через USB.
-- [x] Добавить режим тестового проекта с отдельным путём сохранения и продолжением этого
-  режима после reset. Вход/выход выполняются консолью при остановке, состояние default.gbp
-  и его backup не используется как тестовая заготовка. Оба теста устройства используют этот режим.
-- [x] Добавить диагностические значения active/peak voices, event overflows, пиковую нагрузку,
-  свободную кучу и запас стеков. Снимать показатели в согласованной контрольной точке,
-  а печать выполнять вне аудиозадачи. Предусмотреть сброс измерительного окна.
-- [x] Обновить сборку ESP-IDF, проверить карту памяти и отсутствие больших кадров стека.
-  Проверить размер приложения против слота 0x180000 и запас кучи после создания спрайта 240×135.
+- [x] Wire AppUi and reverse recording queue. Accept results before saving; do not
+  start SD work before recorded-note synchronization finishes.
+- [x] Share editCount/save requests across screens. Retain three-second stopped
+  autosave and protection for unsupported/corrupt files.
+- [x] Keep `K` as a complete press for old tests. Add separate keydown/keyup,
+  Alt/Ctrl modifiers, instrument state, note lists and synth parameters over USB.
+- [x] Add a separate test-project path and retain mode across reset. Enter/exit via
+  console while stopped. Do not use default.gbp or its backup as test fixtures;
+  both device suites use isolation.
+- [x] Add active/peak voices, event overflows, peak load, free heap and stack margins.
+  Sample at a consistent checkpoint and print outside the audio task. Allow reset
+  of the measurement window.
+- [x] Update ESP-IDF build; check memory map and large stack frames. Check application
+  size against `0x180000` and heap remaining after the 240×135 sprite.
 
-**Проверка:** `tools/idf.sh firmware build`, `tools/idf.sh firmware size`, тесты консольного
-протокола и старый сценарий ударных с новым AppUi. `idf.py flash` не используется.
+**Checks:** `tools/idf.sh firmware build`, `tools/idf.sh firmware size`, console
+protocol tests and old drum scenarios under AppUi. Do not use `idf.py flash`.
 
-## Задача 9. Автоматическая проверка на Cardputer и фиксация результата
+## Task 9. Automatic Cardputer validation and results
 
-**Новые файлы:** `tools/device_synth_test.py`, `tools/test_device_synth_test.py`.
-**Изменения:** раздел результатов в спецификации.
+**New:** `tools/device_synth_test.py`, `tools/test_device_synth_test.py`.
+**Modify:** specification results section.
 
-- [x] Подготовить повторяемый сценарий через те же keydown/keyup, что использует клавиатура:
-  живой аккорд, запись, отпускание, повтор цикла, правка/undo, смена дорожки и остановка.
-- [x] Запускать тест на отдельном временном проекте; исходный default.gbp и его backup
-  сохранить и восстановить, включая выход с ошибкой. Тест не должен оставлять пользователю
-  демонстрационные ноты вместо его проекта.
-- [x] Микрофоном измерить тишину, живой синт, записанный цикл и тишину после release/stop.
-  Дополнить проверку громкости чтением состояния нот и голосов: одного пика микрофона
-  недостаточно для подтверждения корректной записи и отсутствия зависания.
-- [x] Проверить сохранение партий, параметров синта и выравнивания после аппаратного reset;
-  отдельно подтвердить загрузку проекта v1 без LOAD ERR и блокировки автосохранения.
-- [x] Измерить 8 ударных вместе с 8 голосами синта, резонансом и длинным release; затем
-  намеренно превысить полифонию. Проверить 40/240 BPM, плотные события четырёх дорожек,
-  игру во время обновлений экрана и сохранения. Учесть и спокойный цикл, и пакет новых нот.
-- [x] Критерий для 8 голосов: пик работы аудиозадачи не более 50 % окна блока, ноль новых
-  переполнений I2S, ошибок обмена и потерь событий за 60 секунд после прогрева.
-  Если цель не проходит, сначала оптимизировать DSP, затем повторить замер с меньшим пулом;
-  итоговое ограничение явно записать. Частоту дискретизации не менять без отдельного решения.
-- [x] Записать фактические CPU, память, стеки, число голосов и уровни микрофона в спецификацию.
-  Оценка тембра и удобства физической игры остаётся за автором; автоматические проверки
-  подтверждают тайминг, состояние, сохранение и наличие сигнала.
+- [x] Create a repeatable scenario through normal keydown/keyup: live chord,
+  recording, release, loop playback, edit/undo, track change and stop.
+- [x] Run in an isolated temporary project; preserve/restore default.gbp and backup,
+  including error exits. Never leave demo notes in place of the user's project.
+- [x] Measure silence, live synth, recorded loop and post-release/stop silence via
+  microphone. Also read note/voice state: a microphone peak alone cannot prove
+  correct recording or absence of stuck notes.
+- [x] Check notes, synth parameters and quantize after hardware reset; separately
+  load v1 without LOAD ERR or autosave lock.
+- [x] Measure eight drums plus the eight-voice target, resonance and long release,
+  then exceed polyphony. Check 40/240 BPM, dense four-track events, screen updates,
+  live playing and saving; include steady loops and bursts of new notes.
+- [x] Eight-voice acceptance: peak audio work at most 50% of the block window, no
+  new I2S overflows, exchange errors or lost events for 60 seconds after warmup.
+  If it fails, optimize DSP, then measure a smaller pool and document the result.
+  Do not change sample rate without a separate decision.
+- [x] Record actual CPU, memory, stacks, voice count and microphone levels. The
+  author assesses timbre/physical comfort; automation validates timing, state,
+  persistence and signal presence.
 
-Команды итоговой проверки:
+Final commands:
 
 ```bash
 make test
@@ -302,34 +303,33 @@ python3 tools/device_test.py
 python3 tools/device_synth_test.py
 ```
 
-Перед запуском обоих тестов устройства включить сохранение/восстановление пользовательского
-проекта: существующий тест ударных пока меняет default.gbp. Launcher по адресу 0x10000
-и приложение по адресу 0x170000 не перезаписываются; карта никогда не форматируется.
+Before either hardware suite, implement user-project preservation: the baseline
+drum test modified default.gbp. Never overwrite Launcher at `0x10000` or the app
+at `0x170000`; never format the card. Current audio tests also enforce the author's
+subsequently requested 5% ceiling.
 
-## Порядок выполнения и готовность
+## Execution order and completion criteria
 
-Задачи выполняются последовательно: модель → совместимость и память → безопасность событий →
-DSP → движок → запись → интерфейс → прошивка → устройство. Каждая задача заканчивается
-своими проверками и небольшим законченным изменением; изменение формата выпускается только
-вместе с миграцией. Дополнительные тесты запускаются для изменённого поведения.
+Model → compatibility/memory → event safety → DSP → engine → recording → UI →
+firmware → device. Each task ends with relevant checks and a coherent change;
+format changes ship only with migration. Run additional tests for changed behavior.
 
-Этап завершён, когда на устройстве можно собрать ударные, записать поверх них аккорды,
-исправить отдельную ноту, остановить, перезагрузить и получить ту же партию и настройки,
-а нагрузочная проверка подтверждает выбранное число голосов без потерь и зависших нот.
+The stage is complete when the device can sequence drums, record chords over them,
+edit a note, stop, reboot and restore the same part/settings, while stress checks
+confirm the chosen voice count without lost events or stuck notes.
 
+## Implementation outcome
 
-## Итог реализации
-
-- Проверки: 156 тестов C++ с ASan/UBSan, 46 тестов Python; обе программы проверки устройства
-  завершились с `0 failures`. Каждый нагрузочный прогон длился 60 секунд после прогрева.
-- По измерениям выбран общий пул **5 голосов** при 32 кГц: пик 46,2 % на 40 BPM и 48,4 % на
-  240 BPM вместе со всеми 8 ударными. Бюджет включает живую игру и сохранение после остановки.
-  Целевые 8 и промежуточные 6 голосов превышали принятый предел 50 % в пробных сборках.
-- Для CPU применены общая таблица синуса, кэш коэффициентов ударных, кэш расписания нот,
-  линейные проходы снятий/атак, расчёт коэффициентов при смене параметров и оптимизация DSP.
-- В очереди остаётся компактная команда с union-полезной нагрузкой; паттерн инструмента
-  передаётся транзакцией. Результаты записи идут отдельной обратной очередью.
-- Проверены миграция v1 на SD, перезагрузка с нотами и настройками, отмена правки и параметров,
-  отсутствие зависших нот и новых переполнений аудио. Контрольные значения пользовательского
-  проекта и backup совпали до и после каждого теста.
-- Инструкция: `docs/stage-3.md`. Измерения и ограничения: раздел «Результаты этапа 3» спецификации.
+- 156 C++ tests with ASan/UBSan and 46 Python tests passed; both hardware programs
+  reported `0 failures`. Each stress run lasted 60 seconds after warmup.
+- Measurements selected **five shared voices** at 32 kHz: peaks 46.2% at 40 BPM and
+  48.4% at 240 BPM with all eight drums, including live playing and saving after
+  stop. Eight- and six-voice trial builds exceeded the 50% limit.
+- Optimizations: shared sine table, drum-coefficient and note-schedule caches,
+  linear release/attack passes, parameter-time coefficient calculation and DSP tuning.
+- Commands retain compact union payloads; instrument patterns transfer through
+  transactions. Recording results use a separate reverse queue.
+- Verified SD v1 migration, rebooted notes/settings, edit/parameter undo, no stuck
+  notes or new audio overflows, and unchanged user-project/backup checksums.
+- [User guide](../../stage-3.md); measurements and limits are in the specification's
+  [stage 3 results](../specs/2026-11-09-groovebox-design.md#stage-3-results).

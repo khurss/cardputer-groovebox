@@ -1,101 +1,121 @@
-# Кнопки и раскладки
+# Keyboard controls and layouts
 
-Стрелки на Cardputer — это `Fn+,` (←), `Fn+/` (→), `Fn+;` (↑), `Fn+.` (↓).
-Ни короткое, ни длинное нажатие Fn больше не открывает окно.
+The Cardputer's arrow keys are `Fn+,` (←), `Fn+/` (→), `Fn+;` (↑) and `Fn+.` (↓).
+In this guide, `Fn+arrows` means those physical combinations. Neither a short nor a
+long press of Fn opens a popup. [All guides](README.md)
 
-## Общие кнопки
+## Global controls
 
-| Кнопки | Действие |
+| Keys | Action |
 |---|---|
-| Opt | Меню; в справке/проектах — закрыть |
-| Esc | Назад/отмена; на основном экране — меню; Performance/Sound → piano roll |
-| Tab | Следующий рабочий экран; в меню — следующая вкладка |
+| Opt | Open/close the menu; close help or Projects |
+| Esc | Back/cancel; open the menu from a main workspace; Performance/Sound → Piano roll |
+| Tab | Next workspace; next tab inside the menu |
 | Fn+1..6 | Drums / Synth / Scenes / Song / Mixer / Sampler |
-| Space | Запуск/остановка транспорта, в том числе из меню |
-| + / − | MAIN ±5%; Ctrl — ±1% |
-| Alt | На синте — запись нот; в сэмплере — запись микрофона |
-| Fn+Backspace | Очистка паттерна ударных, нот или сэмплерных шагов |
-| Fn+Z | Undo текущего редактора |
-| Fn+C / Fn+V | Copy / Paste текущего паттерна или сцены |
+| Space | Start/stop transport, including inside the menu |
+| + / − | MAIN ±5%; hold Ctrl for ±1% |
+| Alt | In Drums/Synth, arm or finish synth recording; in Sampler, start/stop microphone recording |
+| Fn+Backspace | Clear the current drum, synth-note or sampler-step pattern |
+| Fn+Z | Undo in the current editor |
+| Fn+C / Fn+V | Copy / paste the current pattern or scene |
 
-Служебные окна Projects и Quick start перехватывают ввод: сначала закройте их Opt.
-Нажатия не попадают в музыкальные шаги; отпускание уже звучащих нот обрабатывается.
+Projects and Quick start capture input; close them with `Opt` or `Esc` before using
+workspace shortcuts. Modal key presses do not reach musical steps, while releases
+of already sounding notes still work. Esc does not stop transport; use Space.
 
-## Меню
+## Menu
 
-Fn+↑/↓ — строка; Tab или Fn+←/→ — вкладка. Enter запускает действие.
-В SETTINGS Enter выделяет значение, стрелки меняют его, Enter завершает.
-Backspace сначала выходит из редактирования, затем закрывает меню.
-Значения применяются сразу: Backspace не отменяет изменение.
+![Menu navigation and screen selection](images/menu.png)
 
-## Ударные и сэмплерные шаги
+`Fn+↑/↓` selects a row; `Tab` or `Fn+←/→` switches tabs. `Enter` runs an action.
+In SETTINGS, `Enter` selects a value, arrows change it, and `Enter` finishes.
+`Backspace` or `Esc` first exits editing, then closes the menu. Values apply
+immediately; leaving the editor does not revert them. [Full menu guide](menu.md)
+
+## Drums and sampler steps
+
+![Drum sequencer with sound labels and beat numbers](images/drums.png)
 
 ```text
-шаг:   01 02 03 04 05 06 07 08
-       Q  W  E  R  T  Y  U  I
-шаг:   09 10 11 12 13 14 15 16
-       A  S  D  F  G  H  J  K
+Step:  01 02 03 04 05 06 07 08
+        Q  W  E  R  T  Y  U  I
+Step:  09 10 11 12 13 14 15 16
+        A  S  D  F  G  H  J  K
 ```
 
-`1..8` выбирают ударный звук или пэд сэмплера. Shift+шаг — акцент.
-`Fn+L` — длина, `Fn+G` — сетка. `[`/`]` меняют паттерн ударных;
-в сэмплере — `Fn+[`/`Fn+]`. В ударных Fn+−/+ меняют темп,
-в сэмплере — назначенный слот. Общие +/- без Fn всегда меняют MAIN.
+`1..8` selects a drum sound or sampler pad. `Shift+step` adds an accent.
+`Fn+L` changes length; `Fn+G` changes grid. `[` / `]` selects a drum pattern;
+in Sampler, use `Fn+[` / `Fn+]`. `Fn+−/+` changes tempo in Drums and the assigned
+slot in Sampler. Plain `+` / `−` controls MAIN.
 
-В Drums пары без Fn регулируют звук выбранной дорожки: Z/X — tune,
-C/V — decay, B/N — tone, M/`,` — level (уменьшить/увеличить, шаг 8).
-Выбор звука и правка тембра прослушивают его. Fn+W меняет общий swing.
-Прямая правка тембра ударных не имеет Undo и сбрасывает предыдущую отмену.
+In Drums, unmodified key pairs adjust the selected sound: `Z/X` tune, `C/V` decay,
+`B/N` tone, `M/,` level (decrease/increase by 8). Selecting a sound or editing its
+timbre auditions it. `Fn+W` changes global swing. Direct drum sound edits have no
+Undo and invalidate the previous undo action.
 
-## Синт: piano
+## Synth: piano layout and note editing
 
 ```text
-белые: Z X C V B N M ,       Q W E R T Y U I
-чёрные: S D   G H J          2 3   5 6 7
+White: Z X C V B N M ,       Q W E R T Y U I
+Black:  S D   G H J           2 3   5 6 7
 ```
 
-`Fn+−/+` — октава; `[`/`]` — паттерн; `Fn+[`/`Fn+]` — дорожка.
-Shift усиливает velocity. Alt — arm/finish recording. Fn+Q — quantize.
-В пианоролле Fn+стрелки двигают курсор или выбранную ноту; Shift+Fn+←/→
-меняет длину, Shift+Fn+↑/↓ — velocity. Enter добавляет/выбирает;
-Fn+Enter снимает выбор, Backspace удаляет выбранную ноту. Fn+F — fit диапазона.
+`Fn+−/+` changes octave; `[` / `]` changes pattern; `Fn+[` / `Fn+]` changes track.
+`Shift` increases velocity. `Alt` arms/finishes recording. `Fn+Q` toggles recording
+quantize. In the piano roll, `Fn+arrows` moves the cursor or selected note;
+`Shift+Fn+←/→` changes length and `Shift+Fn+↑/↓` changes velocity. `Enter` adds/selects
+a note; `Fn+Enter` or `Esc` deselects; `Backspace` deletes the selected note.
+`Fn+F` switches fit mode. [Recording and editing guide](stage-3.md)
 
-## Синт: strings
+![Piano roll with visible note pitches and velocity strips](images/piano-roll.png)
+
+## Synth: string layout
 
 ```text
-1 2 3 4 5 6 7 8 9 0  — высокая струна
+1 2 3 4 5 6 7 8 9 0  — highest string
 Q W E R T Y U I O P
 A S D F G H J K L ;
-Z X C V B N M , . /  — низкая струна
+Z X C V B N M , . /  — lowest string
 ```
 
-Включение: ACTIONS → Performance. Основной экран показывает цветные линии высоты нот,
-а нажатия — маленькая карта справа внизу. Последний палец строки звучит, отпускание
-возвращает предыдущий. SETTINGS → Keyboard layout возвращает Piano.
-Root и Scale доступны в SETTINGS. [Подробности режима и звука](synth-performance.md).
+Enable it through **ACTIONS → Performance**. Colored pitch trails fill the screen,
+with a small pressed-key map at the lower right. The last pressed key in a row
+sounds; releasing it returns to the previously held key. Choose
+**SETTINGS → Keyboard layout → PIANO** to restore the piano layout. Root and Scale
+are also in SETTINGS. [Performance and sound guide](synth-performance.md)
 
-## Синт: звук и арпеджиатор
+![Performance pitch trails with the four-row keyboard minimap](images/performance.png)
 
-Fn+S — Sound editor / Piano roll. В Sound editor Fn+←/→ выбирают параметр,
-Fn+↑/↓ меняют значение. Fn+A — arp mode, Shift+Fn+A — rate,
-Fn+O — octaves, Fn+T — gate. Полный список есть в SETTINGS.
+## Synth: sound and arpeggiator
 
-## Сцены, песня, микшер
+`Fn+S` switches Sound editor / Piano roll. In Sound editor, `Fn+←/→` selects a
+parameter and `Fn+↑/↓` changes its value. `Fn+A` changes arpeggiator mode,
+`Shift+Fn+A` changes rate, `Fn+O` changes octaves, and `Fn+T` changes gate.
+All parameters are also listed in SETTINGS.
 
-| Экран | Управление |
+## Scenes, Song and Mixer
+
+| Screen | Controls |
 |---|---|
-| Scenes | Fn+стрелки выбирают сцену/дорожку; Fn+−/+ назначают паттерн; Fn+BS очищает ячейку; Enter запускает сцену |
-| Song | Fn+↑/↓ выбирают строку; Fn+←/→ — поле scene/repeats; Fn+−/+ меняют значение; Fn+Enter вставляет сцену; Fn+BS удаляет строку; Enter играет |
-| Mixer | Fn+←/→ выбирают канал; Fn+↑/↓ или Fn+−/+ меняют уровень; Shift — точно; M mute; S solo |
+| Scenes | Fn+arrows selects scene/track; Fn+−/+ assigns a pattern; Fn+Backspace clears a cell; Enter launches a scene |
+| Song | Fn+↑/↓ selects a row; Fn+←/→ selects scene/repeats; Fn+−/+ edits; Fn+Enter inserts a scene; Fn+Backspace deletes a row; Enter plays |
+| Mixer | Fn+←/→ selects a strip; Fn+↑/↓ or Fn+−/+ changes level; Shift gives fine adjustment; M toggles mute; S toggles solo |
 
-## Сэмплер: волна и файлы
+See the [arrangement and mixer guide](stage-4.md) for the pattern-to-song workflow.
 
-Fn+B — файлы; Fn+P — CUT/SEQ; Alt — старт/стоп микрофона.
-В списке Fn+↑/↓ выбирают WAV, Enter загружает.
-В волне Fn+←/→ двигают курсор, Shift даёт шаг в один аудиосэмпл;
-Fn+↑/↓ меняют масштаб. A/D — начало/конец, R — всё выделение,
-Enter — сохранить нарезку. Fn+A выбирает число частей, Fn+Enter нарезает.
-Fn+D сразу удаляет назначенный слот, сохраняя исходный WAV.
-Для удаления с подтверждением используйте ACTIONS → Delete sample slot с подтверждением.
+## Sampler: files and waveform
 
-Все рабочие меню содержат **Key reference** с подсказками текущего экрана.
+`Fn+B` opens files; `Fn+P` switches CUT/PADS; `Alt` starts/stops the microphone.
+In the file list, `Fn+↑/↓` selects a WAV and `Enter` loads it. With a source loaded,
+`Esc` returns from Files/Pads to Cut; otherwise it opens the menu.
+
+In the waveform, `Fn+←/→` moves the cursor; hold `Shift` for one audio frame per
+step. `Fn+↑/↓` changes zoom. `A/D` marks start/end, `R` selects the full source,
+and `Enter` saves a slice. `Fn+A` selects the chop count; `Fn+Enter` chops.
+`Fn+D` immediately deletes the assigned sample slot, retaining the source WAV.
+Use **ACTIONS → Delete sample slot** if you want a confirmation first.
+
+![Sampler pad assignments and step grid](images/sampler-pads.png)
+
+Every workspace menu includes **Key reference** for the current screen.
+[Complete sampler guide](stage-5-sampler.md)

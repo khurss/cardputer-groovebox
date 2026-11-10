@@ -1,96 +1,101 @@
-# Сцены, песня, микшер и арпеджиатор
+# Scenes, song arrangement, mixer and arpeggiator
 
-[Новое меню](menu.md): `Opt`, стрелки и `Enter`.
+Build reusable patterns, combine them into scenes, then arrange scenes into a song.
+`Fn+1..6` opens Drums, Synth, Scenes, Song, Mixer or Sampler; `Tab` cycles them.
+`Space` starts/stops playback. In Song, playback starts from the selected entry.
+[Menu guide](menu.md) · [All guides](README.md)
 
-`Tab` переключает шесть экранов. `Fn+1` — ударные, `Fn+2` — синт,
-`Fn+3` — сцены, `Fn+4` — песня, `Fn+5` — микшер, `Fn+6` — [сэмплер](stage-5-sampler.md). `Space` запускает/останавливает
-воспроизведение; на экране песни запуск идёт с выбранной записи.
+## Menu and master volume
 
+`Opt` opens the menu; `Fn` only modifies keys. Help is under **SCREENS → Key reference**,
+the tutorial under **SCREENS → Quick start**, and workspace settings under SETTINGS.
 
-## Меню и общая громкость
+`−` and `+` (or `=`) adjust MAIN by 5%. `Ctrl+−/+` uses 1% steps. The `Shift` needed
+to type `+` does not change that step. Volume is limited to 0–100%, stored in the
+project and briefly shown as a bar over the workspace. Close Projects/help first,
+as those modal screens capture input.
 
-`Opt` открывает меню, `Fn` только изменяет назначение клавиш и не перекрывает
-экран. Справка по кнопкам — SCREENS → Key reference; пошаговая инструкция —
-SCREENS → Quick start. Настройки текущего экрана находятся во вкладке SETTINGS.
+With `Fn`, these keys adjust tempo in Drums, octave in Synth, pattern assignment in
+Scenes, scene/repeats in Song, and the selected strip in Mixer.
 
-`-` и `+` (клавиша `=` тоже подходит) на любом экране регулируют MAIN с шагом 5 %.
-`Ctrl+-` / `Ctrl++` дают шаг 1 %. `Shift`, необходимый для печатного `+`, не меняет
-шаг громкости. Уровень ограничен 0..100 %, сохраняется в проекте и кратко отображается
-поверх рабочего экрана вместе с полоской громкости.
+## Clear patterns and keep notes visible
 
-Прежние действия этих клавиш выполняются с `Fn`: на ударных — темп, на синте —
-октава, на сценах — назначение паттерна, в песне — сцена/повторы, в микшере —
-уровень выбранной полоски. Эти сочетания подписаны в панели.
+`Fn+Backspace` clears the current drum steps or synth notes without changing length,
+grid or sound. `Fn+Z` undoes the clear. During recording, held notes are finalized
+before the pattern clears, so Undo restores those newly recorded notes too.
 
-## Очистка и видимые ноты
+Held synth keys appear immediately in orange. The pitch window follows live keys
+and focuses the accepted note after recording. Opening an existing pattern shows
+its register. FIT displays the full note range; `Fn+F` switches between FIT and
+semitone zoom. See [piano roll editing](stage-3.md).
 
-`Fn+Backspace` очищает все шаги текущего барабанного паттерна или все ноты текущего
-синт-паттерна. Длина, сетка и звук сохраняются. `Fn+Z` отменяет очистку.
-Во время записи сначала завершаются удержания, затем очищается паттерн;
-отмена возвращает и только что записанные ноты.
+## Arrange a track
 
-В пианоролле удерживаемые клавиши видны сразу оранжевым. Окно высот следует за нажатой
-клавишей; при завершении записи фокус переходит к принятой ноте. При открытии существующего
-паттерна показывается регистр его нот. По умолчанию режим FIT вмещает весь диапазон нот;
-`Fn+F` переключает FIT / точный масштаб с шагом в полутон. Раскладка и остальные команды — в `docs/stage-3.md`.
+Create your blocks first: `[` / `]` selects one of 16 drum patterns. In Synth,
+`Fn+[` / `Fn+]` selects T1..T4 and `[` / `]` selects its pattern.
 
-## Сборка трека
+![Scenes with six track columns and assigned pattern numbers](images/scenes.png)
 
-Сначала создайте блоки: на ударных `[`/`]` выбирают один из 16 паттернов, на синте
-`Fn+[`/`Fn+]` выбирают дорожку T1..T4, `[`/`]` — её паттерн.
+1. Open `Fn+3`. Each row is a scene; columns are DRUM, T1..T4 and SMP.
+2. `Fn+↑/↓` or `[` / `]` selects a scene; `Fn+←/→` selects a track. `1..6` also
+   selects the track column.
+3. `Fn+−/+` chooses a pattern; `--` means no pattern on that track. `Fn+Backspace`
+   clears the cell.
+4. `Fn+C` / `Fn+V` copies/pastes a scene; `Fn+Z` undoes the last edit.
+5. `Enter` launches the selected scene. During playback it waits for the next bar
+   boundary: `+` marks the queued scene and `>` marks the playing scene.
+6. Select a scene and open `Fn+4`. `Fn+Enter` inserts it before the selected song
+   entry. Move down to **+ ADD** to append at the end.
+7. `Fn+↑/↓` selects an entry; `Fn+←/→` selects SCENE/REPEAT; `Fn+−/+` changes the
+   value. `Fn+Backspace` deletes the entry; `Fn+Z` undoes the edit.
+8. `Enter` or `Space` plays from the selected entry. Playback stops after the last
+   entry; the next `Space` starts again from the selection.
 
-1. Откройте `Fn+3`. Строка — сцена, столбцы — DRUM и четыре синт-дорожки.
-2. `Fn+↑/↓` или `[`/`]` выбирают сцену, `Fn+←/→` — дорожку. `1..5` тоже выбирают столбец.
-3. `Fn+-`/`Fn++` выбирают номер паттерна; `--` означает пустую дорожку. `Backspace` делает ячейку пустой.
-4. `Fn+C`/`Fn+V` копируют сцену. `Fn+Z` отменяет последнюю правку.
-5. `Enter` запускает выбранную сцену. Во время игры запуск ждёт ближайшей границы такта:
-   `+` показывает ожидающую сцену, `*` — играющую.
-6. Выберите сцену и перейдите в `Fn+4`. `Fn+Enter` вставляет её в цепочку перед выбранной записью.
-   Для добавления в конец переместите курсор вниз на строку `+ ADD`.
-7. `Fn+↑/↓` выбирают запись, `Fn+←/→` — поле SCENE/REPEAT; `Fn+-`/`Fn++` меняют сцену или повторы.
-   `Backspace` удаляет запись, `Fn+Z` отменяет правку.
-8. `Enter` или `Space` запускают песню с выбранной записи. После последней записи
-   воспроизведение останавливается; следующий `Space` снова запускает выбранную запись.
+![Song arrangement with overview, scene numbers and repeat fields](images/song.png)
 
-В проекте 16 сцен и до 64 записей песни, по 1..255 повторов. Пустая сцена длится такт.
-Паттерны переиспользуются: правка P01 меняет этот блок во всех сценах, где он назначен.
-Открывая ударные/синт после выбора сцены, вы редактируете её назначение, а не всегда сцену 01.
-При записи поверх песни Alt выбирает блок реально играющей сцены; переход песни к следующей
-сцене завершает запись этого блока. Смена экрана тоже завершает запись. Синт можно прослушивать
-при остановленном транспорте.
+A project holds 16 scenes and up to 64 song entries, each with 1–255 repeats.
+An empty scene lasts one bar. Patterns are shared: editing P01 changes it in every
+scene that uses it. Opening Drums/Synth after selecting a scene edits that scene's
+assignment, rather than always scene 01.
 
-## Арпеджиатор на синте
+When recording over a song, `Alt` targets the pattern in the scene actually playing.
+Moving to the next song scene ends recording into that pattern; changing workspace
+also ends it. Synth auditioning works with transport stopped.
+
+## Synth arpeggiator
 
 - `Fn+A`: Off → Up → Down → UpDown.
-- `Shift+Fn+A`: сетка/скорость арпеджиатора, включая триоли.
-- `Fn+O`: 1, 2 или 3 октавы.
-- `Fn+T`: gate — 25, 50, 75 или 100 % шага.
+- `Shift+Fn+A`: rate/grid, including triplets.
+- `Fn+O`: one, two or three octaves.
+- `Fn+T`: gate of 25%, 50%, 75% or 100% of a step.
 
-Настройте режим и удерживайте аккорд. Арпеджиатор обрабатывает живые клавиши и аккорды
-из паттерна. Запись сохраняет исходный аккорд и настройки арпеджиатора: при повторе
-он снова превращается в последовательность, не заполняя паттерн сотнями коротких нот.
-При изменении настроек удержания завершаются; нажмите аккорд снова.
-Общий пул синта остаётся 5 голосов для четырёх дорожек и живой игры.
+Choose a mode and hold a chord. The arpeggiator handles both live keys and recorded
+chords. Recording stores the source chord and arpeggiator settings, so playback
+recreates the sequence without filling the pattern with hundreds of short notes.
+Changing settings ends current holds; play the chord again. All four synth tracks
+and live playing share five voices, or four while samples sound.
 
-## Микшер
+## Mixer
 
-`Fn+5` открывает MAIN, DRUM, T1..T4. `Fn+←/→` выбирают полоску,
-`Fn+↑/↓` или `Fn+-`/`Fn++` меняют уровень на 5 процентных пунктов. С `Shift` шаг — 1 пункт.
-`M` включает mute дорожки, `S` — solo; mute имеет приоритет над solo.
-`Fn+Z` отменяет последнюю правку. MAIN регулирует весь выход после лимитера.
+![Mixer with MAIN, DRUM, four synth tracks and SMP](images/mixer.png)
 
-Сцены, цепочка, уровни, mute/solo и настройки арпеджиатора сохраняются на SD.
-Формат v5 читает проекты v1–v5; сохранение выполняется в v5. Нормальная громкость
-проекта не заменяется тестовой: тесты используют отдельный файл.
+`Fn+5` opens MAIN, DRUM, T1..T4 and SMP. `Fn+←/→` selects a strip; `Fn+↑/↓` or
+`Fn+−/+` changes level by five percentage points, or one with `Shift`. `M` toggles
+track mute and `S` toggles solo; mute takes priority. MAIN has no mute/solo.
+`Fn+Z` undoes the last edit. MAIN controls the full output after the limiter.
+The faders show **configured levels**, not VU measurements.
 
-## Автоматические проверки
+Scenes, song entries, levels, mute/solo and arpeggiator settings save to SD.
+The current firmware reads GBP v1–v5 and writes v5. Tests use a separate file and
+do not replace a regular project's volume with the test level.
 
-В тестовом режиме master при каждом старте устанавливается в 5 %, независимо от
-загруженного файла, а отдельный потолок выхода не позволяет превысить 5 % даже при
-изменении фейдера. Проверки `LEVEL` измеряют цифровой сигнал, переданный в I2S;
-пик выше 1557 при таком режиме считается ошибкой. Микрофон также измеряется,
-но его фон на такой громкости не используется как обязательный порог слышимости.
-После теста обычный проект и его backup проверяются и возвращаются без изменений.
+## Automated checks
+
+Test mode resets master volume to 5% on each boot, regardless of the loaded file.
+An independent ceiling prevents output above 5% even if a test raises the fader.
+`LEVEL` checks measure the digital I2S signal; a peak above 1557 fails. Microphone
+levels are also measured, but room noise at this volume is not used as a mandatory
+audibility threshold. The regular project and backup are checked and restored.
 
 ```bash
 make test
@@ -102,6 +107,7 @@ python3 tools/device_synth_test.py
 python3 tools/device_test.py
 ```
 
-Консоль `A` печатает сцены, цепочку и микшер; `I` дополнительно показывает арпеджиатор,
-`S` — активную/ожидающую сцену и песню. При аварийном прерывании тестовый режим
-можно снять командой `T end` на остановленном транспорте.
+USB command `A` prints scenes, song entries and mixer; `I` includes arpeggiator
+settings; `S` includes active/queued scene and song state. After an interrupted test,
+stop transport and send `T end`. Follow the
+[installation requirements](../README.md#build-and-install).

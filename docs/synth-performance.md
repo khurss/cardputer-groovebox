@@ -1,66 +1,80 @@
-# Синт: игра, ноты и звук
+# Synth Performance: strings, legato and sound presets
 
-`Fn+2` открывает синт. **Opt → ACTIONS** содержит три вида:
+Press `Fn+2` to open the synth. **Opt → ACTIONS** offers three views:
 
-- **Performance** — плавные цветные линии нот и небольшая карта нажатий 4×10,
-  root/scale, glide и состояние записи. Esc возвращает piano roll.
-- **Piano roll** — редактирование нот и видимый диапазон записанной партии.
-- **Sound editor** — девять карточек параметров со значениями и полосками.
+- **Performance**: smooth colored pitch trails, a small 4×10 key map, root/scale,
+  glide and recording status. `Esc` returns to the piano roll.
+- **Piano roll**: note editing with the recorded part's pitch range in view.
+- **Sound editor**: nine parameter cards with values and bars.
 
-При первом включении Performance с piano-раскладки включаются Strings и Minor;
-если glide был нулевым, загружается Warm slide. Дальнейшая смена вида сохраняет звук.
-Для возвращения обычной раскладки выберите SETTINGS → Keyboard layout → PIANO.
+![Synth Performance showing pitch trails and pressed-key minimap](images/performance.png)
 
-## Струны и плавные переходы
+The first switch to Performance from the piano layout enables **Strings** and
+**Minor**; if glide was zero, it loads **Warm slide**. Subsequent view changes retain
+the sound. Choose **SETTINGS → Keyboard layout → PIANO** to return to piano keys.
+[All guides](README.md) · [Keyboard controls](controls.md)
+
+## Strings and smooth transitions
 
 ```text
-высокая  1 2 3 4 5 6 7 8 9 0
+Highest  1 2 3 4 5 6 7 8 9 0
          q w e r t y u i o p
          a s d f g h j k l ;
-низкая   z x c v b n m , . /
+Lowest   z x c v b n m , . /
 ```
 
-Каждая строка — один голос. При перекрытии клавиш приоритет у последней нажатой;
-отпускание возвращает к предыдущей удерживаемой клавише этой строки.
-Огибающая, фаза и состояние фильтра сохраняются при legato с Glide > 0.
-Между строками можно играть аккорды. Лад ограничивает доступные ноты;
-начальные высоты соседних строк разнесены на кварту и подстроены вверх к ладу.
+Each row plays one live voice. When keys overlap, the most recently pressed key
+wins; releasing it returns to the previous held key in that row. With **Glide > 0**,
+legato preserves the envelope, oscillator phase and filter state. Play across rows
+for chords. The scale constrains available notes; adjacent rows start a fourth
+apart, adjusted upward to the scale.
 
-**SETTINGS:** Keyboard layout, Root note (C..B), Scale (Chromatic, Major,
-Minor, Pentatonic). Эти настройки сохраняются отдельно для каждой из четырёх дорожек.
-В piano-раскладке root/scale не транспонируют клавиши.
-`Fn+- / Fn++` — октава; обычные +/- — громкость всего устройства.
+**SETTINGS** includes Keyboard layout, Root note (C..B), and Scale (Chromatic,
+Major, Minor, Pentatonic). These are saved separately for each of the four tracks.
+Root/scale does not transpose the piano layout. `Fn+−/+` changes octave;
+plain `+` / `−` changes master volume.
 
-Glide задаётся от 0 до 127 с квадратичной шкалой времени до 1 секунды.
-При 0 новый палец переатакует ноту. Legato при перекрытии сохраняет огибающую;
-после отпускания всей строки следующая нота начинает новую атаку.
-Арпеджиатор работает с активными нотами струн, но отдельные шаги арпеджиатора
-имеют собственную атаку.
+Glide ranges from 0 to 127 with a quadratic time scale up to one second. At zero,
+a new key retriggers the note. Overlapping legato preserves the envelope; after
+all keys in a row are released, the next note starts a new attack. The arpeggiator
+uses the active string notes, but its individual steps have their own attacks.
 
-## Начальные тембры
+Pitch trails visualize live and current-pattern note events, with smoothing that
+illustrates glide. They are not an oscilloscope or an exact audio-frequency reading.
 
-SETTINGS → Sound preset: Warm slide, Round bass, Soft keys, Slow pad, Acid lead,
-Pure sine. Это собственные пресеты грувбокса. Выбор изменяет waveform, ADSR,
-cutoff/resonance, glide и уровень текущей дорожки; Undo возвращает весь прежний звук.
-Название в селекторе — последний выбранный пресет этой сессии, после ручных правок
-звук может отличаться; в проекте сохраняются сами параметры.
+## Starting sounds
 
-Для ручной настройки откройте Sound editor или `Fn+S`. Fn+←/→ выбирают карточку,
-Fn+↑/↓ меняют значение. В SETTINGS те же параметры доступны списком;
-Ctrl даёт точный шаг. Доступны sine, triangle, saw и square.
+Choose **SETTINGS → Sound preset**: Warm slide, Round bass, Soft keys, Slow pad,
+Acid lead or Pure sine. These are Groovebox's own presets. A preset changes the
+current track's waveform, ADSR, cutoff/resonance, glide and level; Undo restores
+the whole previous sound.
 
-## Запись
+The selector name is the last preset chosen in the current session. Manual edits
+may make the sound differ from that preset; the project stores the actual parameters.
 
-Alt вооружает запись, Space запускает транспорт; Alt ещё раз завершает проход.
-В строковом режиме каждый переход записывается отдельной нотой с корректной
-длительностью. В пианоролле доступны quantize, изменение начала/высоты/длины/velocity,
-копирование и отмена. Воспроизведение записанного клипа использует общий полифонический
-движок: история удержания пальцев не хранится как отдельная автоматизация,
-поэтому идентичная live-legato артикуляция при воспроизведении не гарантируется.
+![Sound editor showing a three-by-three grid of synth parameters](images/sound-editor.png)
 
-## Отличия от GLIDE
+For manual adjustment, open **Sound editor** or press `Fn+S`. `Fn+←/→` selects a
+card; `Fn+↑/↓` changes its value. The same parameters appear as a list in SETTINGS,
+where `Ctrl` gives a fine step. Waveforms are sine, triangle, saw and square.
 
-Референс: [GLIDE от CHARL3X](https://github.com/CHARL3X/GLIDE-Synth-Cardputer-ADV).
-Заимствована идея взаимодействия «клавиатурные строки как струны», реализованная
-в нашем движке. Его фирменные генеративные тембры, gyro morph, эффекты и графика
-не переносились. Публичный репозиторий на момент проверки не содержит исходного DSP.
+## Record and edit a performance
+
+Press `Alt` to arm recording and `Space` to start transport. If transport is already
+playing, `Alt` starts recording immediately. Press `Alt` again to finish the pass.
+In Strings, each transition is recorded as a separate note with its duration.
+
+![Recorded synth notes in the piano roll](images/piano-roll.png)
+
+The piano roll supports quantize, start/pitch/length/velocity editing, copying and
+undo. Recorded clips play through the shared polyphonic engine: finger-hold history
+is not stored as separate automation, so playback does not guarantee identical live
+legato articulation. See [live recording and note editing](stage-3.md).
+
+## Relationship to GLIDE
+
+The interaction reference is
+[CHARL3X's GLIDE Synth](https://github.com/CHARL3X/GLIDE-Synth-Cardputer-ADV).
+Keyboard rows acting as strings are implemented in Groovebox's own engine.
+GLIDE's generative sounds, gyro morph, effects, artwork and presets are not included;
+this implementation does not promise identical sound.

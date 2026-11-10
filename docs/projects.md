@@ -1,37 +1,54 @@
-# Проекты
+# Projects: create, save, load and recover
 
-Остановите воспроизведение и запись. Нажмите **Opt → SCREENS → Projects**.
+Stop playback and recording, then open **Opt → SCREENS → Projects**.
+[All guides](README.md)
 
-- **Save current** — сохранить текущий проект немедленно.
-- **New project…** — введите имя, Enter создаёт пустой проект. Текущий сохраняется
-  перед переключением; громкость нового наследуется, чтобы не получить неожиданный скачок.
-- **Save copy as…** — записать отдельную версию, продолжая работу в текущем проекте.
-- **Add demo songs** — добавить три готовые песни. Текущий проект сохраняет свои
-  данные; существующие имена демо не перезаписываются. [Список демо](../examples/README.md).
-- **Имя в списке** — открыть. Enter показывает подтверждение, ещё один Enter
-  сохраняет текущий проект и открывает выбранный; Backspace отменяет.
+![Project manager showing save, new, copy, demo installation and project files](images/projects.png)
 
-Имя: 1–23 символа `a-z`, `0-9`, `-`, `_`. Backspace стирает символ, Opt отменяет ввод.
-Существующее имя в New/Save copy не перезаписывается. В списке отображается до 32
-проектов; при превышении лимита показано сообщение. Для большей коллекции временно
-перенесите лишние `.gbp` с карты на компьютер.
+## Project actions
 
-Файлы находятся в `/groovebox/projects/`. Выбранное имя хранится в `active.txt`; `active.bak` позволяет восстановить
-предыдущий выбор при обрыве питания во время переключения.
-При смене проекта устройство перезапускается: так очищаются голоса, очередь
-редактора и загружается нужный кэш сэмплов. После обычного включения открывается
-последний выбранный проект. Без выбора используется `default.gbp`.
+- **Save current** saves immediately.
+- **New project…** creates an empty project after you enter a name and press
+  `Enter`. Your current project saves before switching. The new project inherits
+  the current volume to avoid an unexpected jump.
+- **Save copy as…** writes a separate version while you continue in the current
+  project. Open the copy from the list if you want to edit it instead.
+- **Add demo songs** installs three [complete demo arrangements](../examples/README.md)
+  without changing the current project or overwriting existing demo filenames.
+- **A project name in the list** opens that project. Press `Enter` to show the
+  confirmation, then `Enter` again to save your current work and switch.
+  `Backspace` or `Esc` cancels.
 
-Автосохранение работает после остановки или после трёх секунд без правок на
-остановленном транспорте. Запись идёт через временный файл, предыдущая версия
-сохраняется как `.gbp.bak`. Ошибка записи не подтверждается как успех.
+Enter a name using 1–23 characters: `a-z`, `0-9`, `-` or `_`. `Backspace` deletes a
+character; `Opt` or `Esc` cancels name entry. New and Save copy do not overwrite an
+existing name. The browser lists up to 32 projects and reports when that limit is
+exceeded; move extra `.gbp` files to your computer for a larger collection.
 
-При повреждённом основном файле загрузчик пробует backup. `BACKUP` означает режим
-восстановления: автосохранение поверх исходника заблокировано. Сначала сделайте
-**Save copy** с новым именем. В режиме восстановления успешная Save copy открывает сохранённую копию после
-перезапуска. Исходный повреждённый файл и backup остаются на карте.
+## Storage and switching
 
-Проект содержит паттерны, сцены, песню, микшер, синты, root/scale/layout и ссылки
-на WAV с границами нарезок. **Аудио не встраивается в `.gbp`**: переносите вместе
-папки `projects` и `samples`. Save copy разделяет исходные WAV с оригиналом.
-Читаются v1–v5, новые сохранения имеют v5; старые прошивки v5 не прочтут.
+Projects live in `/groovebox/projects/`. The selected name is recorded in
+`active.txt`; `active.bak` can restore the previous selection if power fails during
+a switch. Switching projects restarts the device to clear voices and editor queues
+and load the appropriate sample cache. Startup reopens the last selected project;
+without a selection it uses `default.gbp`.
+
+Autosave runs after transport stops, or after three idle seconds while stopped.
+Saving uses a temporary file and keeps the previous version as `.gbp.bak`. A failed
+write is not reported as a successful save.
+
+## Recover a damaged project
+
+If the primary file is damaged, the loader tries its backup. **BACKUP** indicates
+recovery mode: autosave over the original is blocked. Use **Save copy as…** with a
+new name first. In recovery mode, a successful Save copy selects the saved copy and
+restarts into it. The damaged original and its backup remain on the card.
+
+## Transfer projects between cards or computers
+
+A project contains patterns, scenes, song entries, mixer and synth settings,
+root/scale/layout, and WAV references with slice boundaries. **Audio is not embedded
+in `.gbp` files.** Copy both `/groovebox/projects/` and `/groovebox/samples/` when
+transferring your work. A project copy shares the original WAV files.
+
+The firmware reads GBP v1–v5 and writes v5. Older firmware without v5 support cannot
+open new saves. [Sampler storage and cache details](stage-5-sampler.md#storage-and-project-format)

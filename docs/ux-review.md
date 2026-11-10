@@ -1,83 +1,89 @@
-# Ревью UX/UI
+# UX/UI review and interaction decisions
 
-Проверены обработчики кнопок, состояния всех шести экранов, меню, запись,
-сохранение и отображение на 240×135. Это инженерное ревью и проверка на устройстве,
-не исследование с группой пользователей.
+This engineering review covered key handlers, all six workspaces, menus, recording,
+saving and the 240×135 display, including device checks. It was not a user study.
+It predates the [visual refresh](visual-refresh.md), which updates the appearance
+and Performance visualization. Screenshots below show the current interface.
+[All guides](README.md)
 
-## Главные проблемы и выбранные решения
+![Current workspaces after the visual refresh](images/interface.png)
 
-| Приоритет | Наблюдение | Решение |
+## Main problems and chosen solutions
+
+| Priority | Observation | Solution |
 |---|---|---|
-| Высокий | Fn нужен для стрелок, но закрывает рабочий экран | Fn только модификатор; Opt — меню; справка открывается явно |
-| Высокий | Один автосохраняемый файл не позволяет уверенно начать новый трек | Projects: New, Save, Save copy, список Open; сохранение перед переключением |
-| Высокий | Пианоролл одновременно служит сценой для игры и редактором | Отдельные Performance, Piano roll и Sound editor |
-| Высокий | Между нотами меняется атака, струна не возвращается к удержанному пальцу | Один live-токен на строку; legato сохраняет фазу, огибающую, фильтр; last-note priority |
-| Средний | Для первых действий нужно помнить комбинации | Восемь страниц quick start и контекстная справка в приложении |
-| Средний | Редактор звука показывает один параметр без обзора | Сетка 3×3: все параметры, значения, полоски и выбранное поле |
-| Средний | При игре неясно, какие клавиши удержаны | Четыре видимые строки, отдельные цвета удержанных и звучащих клавиш, имя ноты |
-| Средний | Очистка и запись плохо обнаруживаются | Контекстные ACTIONS, подпись Stop recording, сообщения результата, Undo |
+| High | Fn is needed for arrows but obscures the workspace | Fn only modifies keys; Opt opens the menu; help opens explicitly |
+| High | A single autosaved file makes starting a new track uncertain | Projects: New, Save, Save copy, Open list, and save before switching |
+| High | Piano roll serves as both performance view and editor | Separate Performance, Piano roll and Sound editor views |
+| High | Transitions retrigger attacks and a string does not return to a held key | One live token per row, legato retaining phase/envelope/filter, last-note priority |
+| Medium | First steps require memorized shortcuts | Eight tutorial pages and contextual help in the application |
+| Medium | Sound editing shows one parameter without an overview | A 3×3 grid of parameters, values, bars and selected field |
+| Medium | Held keys are unclear during playing | A visible four-row map distinguishing held and sounding keys; later made a compact minimap |
+| Medium | Clear and record are hard to discover | Contextual ACTIONS, Stop recording labels, result messages and Undo |
 
-## Предлагаемая структура
+## Interaction structure
 
-**Рабочий экран → Opt → экраны / действия / настройки.** Все частые действия
-доступны из меню, сочетания остаются для игры. Меню не открывается само.
-В SCREENS рядом с шестью рабочими экранами находятся Projects, Quick start и Key reference.
-Это сохраняет доступ к работе одним `Fn+1..6` и не заставляет прокручивать служебные
-экраны при обычном `Tab`.
+**Workspace → Opt → screens / actions / settings.** Frequent actions are available
+in the menu, while shortcuts remain available for playing. The menu never opens
+on its own. SCREENS puts Projects, Quick start and Key reference beside the six
+workspaces, preserving direct `Fn+1..6` access without adding utility screens to Tab
+cycling.
 
-Синт: Performance для игры → Piano roll для структуры → Sound editor для тембра.
-В Performance переход включается явно и подбирает начальный струнный звук, если
-раньше была piano-раскладка без glide. Существующие проекты открываются с прежними
-настройками и не меняют звук сами.
+![Menu with explicit screen, action and settings tabs](images/menu.png)
 
-## По каждому экрану
+Synth workflow: Performance for playing → Piano roll for structure → Sound editor
+for timbre. Entering Performance is explicit and supplies a starting string sound
+when coming from a piano layout with no glide. Existing projects reopen with their
+saved settings and do not change sound automatically.
 
-- **Drums:** сетка 8×16 даёт хороший обзор. Сохраняем две группы восьми шаговых
-  клавиш и отдельный выбор звука. Очистка и Undo доступны без знания Fn-комбинаций.
-- **Synth:** инструменту нужен видимый отклик на игру, редактору — сетка и курсор.
-  Разделение видов снимает конфликт. Root/scale действуют только в Strings;
-  piano-раскладка остаётся хроматической.
-- **Scenes:** это назначения паттернов по дорожкам, а не копии аудио. В руководстве
-  явно показан переход «паттерн → сцена → строка песни».
-- **Song:** вставка и запуск раньше различались только Fn. Меню называет действия
-  отдельно: Insert scene и Play from row; повторения доступны в SETTINGS.
-- **Mixer:** MAIN всегда управляется +/-; выбранный канал имеет отдельную регулировку.
-  Mute/solo для MAIN недоступны с объяснением.
-- **Sampler:** файлы, волнограмма и шаги — разные режимы. В меню они названы явно.
-  Назначение слота показывает имя WAV; удаление через меню требует подтверждения.
-- **Projects:** операции требуют остановки. Перед открытием явно сообщается
-  «текущий проект сохранится, устройство перезапустится». Ошибка сохранения
-  оставляет текущий проект открытым. New/Copy не перезаписывают существующее имя.
+## Workspace decisions
 
-## Что можно улучшать дальше
+- **Drums:** an 8×16 grid gives an overview. Keep two groups of eight step keys and
+  separate sound selection. Clear and Undo are accessible without Fn shortcuts.
+- **Synth:** the instrument needs immediate feedback; the editor needs a grid and
+  cursor. Separate views serve both. Root/scale affects Strings; Piano remains chromatic.
+- **Scenes:** cells assign reusable patterns rather than copy audio. The guide
+  explicitly teaches pattern → scene → song entry.
+- **Song:** insertion and playback previously differed only by Fn. The menu names
+  Insert scene and Play from row separately; repeats are in SETTINGS.
+- **Mixer:** MAIN always uses plain +/− in workspaces; selected channels have separate
+  adjustments. Mute/solo is unavailable for MAIN with an explanation.
+- **Sampler:** files, waveform and steps are separate named modes. Slot assignment
+  shows the WAV filename; menu deletion asks for confirmation.
+- **Projects:** operations require stopped transport. Before opening, the UI explains
+  that the current project saves and the device restarts. Save failure keeps it
+  open. New/Copy does not overwrite an existing name.
 
-Следующий крупный шаг — единая нижняя строка из двух-трёх контекстных действий
-на каждом рабочем экране и режим упрощённых настроек. Сейчас быстрые клавиши
-и плотность старых экранов сохранены ради совместимости; полностью новое управление
-для всех экранов лучше проверять отдельными сценариями реальной игры.
+![Sampler waveform editor with explicit mode tabs](images/sampler-cut.png)
 
-Возможные последующие улучшения звука: детюнинг нескольких осцилляторов, эффекты,
-модуляция и спектральные пресеты. Их нельзя добавлять без замера бюджета CPU:
-грувбокс одновременно играет ударные, несколько синтов и сэмплы.
+## Further improvements
 
-GLIDE выбран как ориентир по поведению струн и визуальной обратной связи.
-В проверенном публичном репозитории нет исходного DSP; точное воспроизведение его
-тембров этим изменением не заявляется.
+This review proposed a shared footer with two or three contextual actions per
+workspace; the later visual refresh implements consistent short action hints.
+Simplified settings remain a possible next step. Any broader control redesign
+should be checked through real playing scenarios while retaining familiar shortcuts.
 
-## Проверка реализации
+Possible sound improvements include oscillator detuning, effects, modulation and
+spectral presets. They require CPU-budget measurements because drums, multiple
+synths and samples play concurrently.
 
-- 210 C++ тестов с AddressSanitizer/UndefinedBehaviorSanitizer, без ошибок.
-- 55 Python-тестов инструментов, без ошибок.
-- На Cardputer проверены четыре струны, возврат к удержанной ноте, отпускание
-  при открытом меню и запись перехода как трёх нотных сегментов.
-- Проверены quick start, New, Save copy, пустой новый проект, отмена открытия,
-  восстановление сохранённых шагов и явный Save.
-- Отдельно проверены навигация меню, параметры синта, очистка/Undo,
-  запись микрофона и сохранение после перезапуска.
-- На четырёх живых струнах: пик DSP 10,6% в трёхсекундном окне без новых
-  RX/TX overflow. Это проверка этого сценария, не оценка максимальной песни.
-- Звуковые проверки ограничены 5%; обычный проект и backup после них не изменились.
+GLIDE was the reference for string behavior and visual feedback. The implementation
+uses its own DSP and does not claim to reproduce GLIDE's timbres exactly.
 
-Аппаратный тест выявил отличие FatFs: rename не заменяет существующий файл.
-Выбор стартового проекта теперь записывается с вращением `active.txt` / `active.bak`
-и откатом при ошибке, вместо предположения о POSIX-замене.
+## Validation at this stage
+
+- 210 C++ tests with AddressSanitizer/UndefinedBehaviorSanitizer passed.
+- 55 Python tool tests passed.
+- Device checks covered four strings, return to held notes, release while the menu
+  is open and recording a transition as three note segments.
+- Quick start, New, Save copy, an empty new project, cancelled opening, restored
+  steps and explicit Save were checked.
+- Menu navigation, synth parameters, clear/Undo, microphone recording and saving
+  across reboot were checked separately.
+- Four live strings reached 10.6% peak DSP in a three-second window without new
+  RX/TX overflows. This measures that scenario rather than a maximum-load song.
+- Audio checks were limited to 5%; the regular project and backup were unchanged.
+
+Hardware checks exposed a FatFs difference: rename does not replace an existing
+file. Startup-project selection now rotates `active.txt` / `active.bak` with rollback
+on failure rather than assuming POSIX replacement behavior.

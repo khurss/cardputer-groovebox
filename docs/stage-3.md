@@ -1,66 +1,78 @@
-# Инструментальные дорожки
+# Synth tracks: live recording and piano roll editing
 
-[Новый режим Performance, струны, пресеты](synth-performance.md).
-[Кнопки и раскладки](controls.md).
+Groovebox provides four synth tracks alongside the drum machine. Each track has
+16 patterns, with up to 64 notes per pattern. Five voices are shared by all synth
+tracks and live playing; this drops to four while samples play. When voices run
+out, the quietest is stolen, with the oldest breaking a tie.
 
-Прошивка содержит драм-машину и четыре синт-дорожки. На каждой дорожке 16 паттернов,
-до 64 нот в паттерне. Пять голосов делятся между всеми синт-дорожками и живой игрой.
-При нехватке голосов освобождается самый тихий, при равенстве — самый старый.
+![Synth piano roll displaying a recorded part](images/piano-roll.png)
 
-## Быстрый старт
+[Performance, strings and presets](synth-performance.md) ·
+[Keyboard controls](controls.md) · [All guides](README.md)
 
-1. Соберите ударные на первом экране, затем нажмите `Tab` или `Fn+2`.
-2. Играйте на `z x c v b n m ,` и `q w e r t y u i`. Чёрные клавиши —
-   `s d g h j` и `2 3 5 6 7`. `Fn+-` и `Fn++` меняют октаву; `Shift` даёт акцент.
-3. Нажмите `Alt`, чтобы вооружить запись, затем `Space`, чтобы запустить цикл.
-   Если цикл уже играет, `Alt` начинает запись сразу.
-4. Сыграйте партию и отпустите клавиши. Ещё один `Alt` завершает запись и оставляет
-   цикл играть; `Space` завершает запись и останавливает воспроизведение.
-5. После остановки проект сохраняется на SD. Правки на остановке сохраняются
-   через три секунды. `Fn+z` отменяет последнюю правку или весь последний сеанс записи.
+## Record your first part
 
-Выбранные паттерны звучат вместе в сцене 0. `Fn+[` / `Fn+]` переключают дорожку,
-`[` / `]` — её паттерн. `Fn+1` возвращает ударные. При смене экрана, дорожки
-или паттерна запись завершается, живые клавиши освобождаются.
+1. Make a drum pattern, then press `Tab` or `Fn+2`.
+2. Play `z x c v b n m ,` and `q w e r t y u i`. Black keys are `s d g h j` and
+   `2 3 5 6 7`. `Fn+−/+` changes octave; `Shift` increases velocity.
+3. Press `Alt` to arm recording, then `Space` to start the loop. If already playing,
+   `Alt` starts recording immediately.
+4. Play a part and release the keys. Press `Alt` again to finish recording while
+   the loop continues; `Space` finishes recording and stops playback.
+5. After stopping, the project saves to SD. Edits made while stopped save after
+   three idle seconds. `Fn+Z` undoes the last edit or the entire last recording pass.
 
-## Правка нот
+Patterns play together in the selected scene. `Fn+[` / `Fn+]` changes synth track;
+`[` / `]` changes that track's pattern. `Fn+1` returns to Drums. Changing workspace,
+track or pattern finishes recording and releases live keys. Simply browsing a
+workspace or selecting a track does not fill empty scene cells; adding notes,
+recording or explicitly selecting a pattern assigns it.
 
-| Клавиши | Действие |
+## Edit notes
+
+| Keys | Action |
 |---|---|
-| `Fn+стрелки` | Переместить курсор; если нота выбрана — изменить её начало или высоту |
-| `Enter` | Выбрать ноту под курсором или добавить новую; повторное нажатие перебирает совпадающие ноты |
-| `Fn+Enter` | Снять выбор ноты |
-| `Backspace` | Удалить выбранную ноту |
-| `Shift+Fn+←/→` | Изменить длину |
-| `Shift+Fn+↑/↓` | Изменить силу удара |
-| `Fn+c` / `Fn+v` | Скопировать / вставить паттерн |
-| `Fn+z` | Отменить последнее действие |
-| `Fn+l` | Переключить длину 16 / 4 / 8 шагов |
-| `Fn+g` | Переключить сетку |
-| `Fn+w` | Переключить общий свинг |
-| `Fn+q` | Выравнивание записи по сетке / выключено |
+| Fn+arrows | Move the cursor, or change the selected note's start/pitch |
+| Enter | Select the note under the cursor or add one; repeated presses cycle overlapping notes |
+| Fn+Enter / Esc | Deselect the note |
+| Backspace | Delete the selected note |
+| Shift+Fn+←/→ | Change length |
+| Shift+Fn+↑/↓ | Change velocity |
+| Fn+C / Fn+V | Copy / paste the pattern |
+| Fn+Z | Undo the last action |
+| Fn+Backspace | Clear all notes in the current pattern |
+| Fn+L | Cycle pattern length: 16 / 4 / 8 steps |
+| Fn+G | Cycle grid |
+| Fn+W | Cycle global swing |
+| Fn+Q | Toggle recording quantize |
+| Fn+F | Switch fit / semitone pitch zoom |
 
-Стрелки Cardputer: `Fn+,` — влево, `Fn+/` — вправо, `Fn+;` — вверх,
-`Fn+.` — вниз. Изменение сетки не перемещает существующие ноты. Ноты за новым концом
-паттерна остаются в проекте; надпись `HIDDEN` показывает, что они есть.
+The physical arrows are `Fn+,` left, `Fn+/` right, `Fn+;` up and `Fn+.` down.
+Changing grid does not move existing notes. Notes beyond a shortened pattern's end
+remain in the project; **HIDDEN** indicates their presence.
 
-Запись поддерживает аккорды и ноты через конец цикла. Удержание дольше одного цикла
-сохраняется как одна нота длиной в цикл. Без выравнивания сохраняются тики с разрешением
-96 PPQN; клавиатурные события применяются на границе аудиоблока 256 кадров.
-`NOTE FULL` означает, что новые ноты уже не записываются; живая игра продолжает работать.
-Во время записи правка целевого инструментального паттерна временно недоступна.
+Held keys appear immediately in orange, and the pitch window follows the played
+note. Opening a pattern shows its note range; FIT includes the whole range.
+Recording supports chords and notes crossing the loop boundary. Holding a note
+longer than one loop saves a single loop-length note. With quantize off, timing is
+stored at 96 PPQN; keyboard events apply at 256-frame audio-block boundaries.
+**NOTE FULL** means new notes can no longer be recorded, but live playing still
+works. Editing the target synth pattern is temporarily disabled during recording.
 
-## Звук
+## Shape the sound
 
-`Fn+s` открывает параметры синта и возвращает пианоролл. `Fn+←/→` выбирают поле,
-`Fn+↑/↓` изменяют его. Доступны sine, triangle, saw, square, ADSR, low-pass,
-резонанс, glide и уровень. Изменение параметров не сбрасывает фазы играющих нот.
+![Sound editor with waveform, envelope, filter, glide and level](images/sound-editor.png)
 
-Attack и decay регулируются до 2 с, release — до 4 с, glide — до 1 с.
-Прошивка читает проекты форматов v1–v5, сохраняет в v5. Параметры синта и
-выравнивания сохраняются вместе с нотами.
+`Fn+S` switches between sound parameters and the piano roll. `Fn+←/→` selects a
+field; `Fn+↑/↓` changes it. Available controls are sine/triangle/saw/square, ADSR,
+low-pass cutoff, resonance, glide and level. Parameter edits do not reset the phase
+of sounding notes.
 
-## Проверки
+Attack and decay reach two seconds, release four seconds, and glide one second.
+Synth parameters and quantize settings save with the notes. The current firmware
+reads GBP v1–v5 and saves v5. See [projects](projects.md) for backup and recovery.
+
+## Developer checks
 
 ```bash
 make test
@@ -72,14 +84,15 @@ python3 tools/device_test.py
 python3 tools/device_synth_test.py
 ```
 
-`build/synth.wav` содержит примеры четырёх форм волн, аккорда, фильтра и glide.
-Оба теста устройства включают отдельный проект `stage3-test.gbp`, сохраняют этот режим
-через перезагрузки, затем возвращают обычный проект и сверяют контрольные значения
-`default.gbp` и его резервной копии. Если тест был принудительно убит, режим можно
-снять командой `T end` через USB на остановленном транспорте.
+`build/synth.wav` contains examples of all four waveforms, a chord, filter and glide.
+Hardware checks use a separate `stage3-test.gbp`, retain test mode across reboots,
+then restore the regular project and compare checksums of `default.gbp` and its
+backup. Audio checks use a 5% output ceiling. If a test is forcibly interrupted,
+stop transport and send `T end` over USB to leave test mode.
 
-Консоль: `K <модификаторы> <клавиша>` — полное нажатие, `D` и `U` — отдельные нажатие
-и отпускание. Модификаторы `f`, `s`, `c` означают Fn, Shift, Ctrl; `-` — без них.
-Имена специальных клавиш: `space`, `tab`, `alt`, `enter`, `back`, `fn`, `shift`, `ctrl`.
-`S` печатает транспорт и ударные, `I` — инструмент и ноты, `C` — нагрузку/голоса/счётчики,
-`C reset` начинает новое окно измерения пика, `H` — контрольные значения обычного проекта.
+USB console: `K <modifiers> <key>` sends a complete press; `D` and `U` send separate
+press/release events. Modifiers `f`, `s`, `c` mean Fn, Shift, Ctrl; `-` means none.
+Special key names include `space`, `tab`, `alt`, `enter`, `back`, `fn`, `shift`, `ctrl`.
+`S` prints transport/drums; `I` prints synth/notes; `C` prints load, voices and
+counters; `C reset` starts a new peak-measurement window; `H` prints regular-project
+checksums. Follow the [installation requirements](../README.md#build-and-install).

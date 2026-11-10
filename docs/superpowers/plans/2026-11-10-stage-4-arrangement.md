@@ -1,50 +1,53 @@
-# Этап 4: сцены, песня, микшер и улучшения синта
+# Stage 4: scenes, song, mixer and synth improvements
 
-Запрос автора: следующий этап, очистка текущего паттерна, видимые сразу ноты,
-арпеджиатор, сборка большого трека и регулировка громкости. Автор разрешил реализацию.
-Во всех синтетических аппаратных тестах громкость — максимум 5%.
+Historical implementation record. See the [current guide](../../stage-4.md).
 
-Порядок реализации:
+The project author requested the next stage, clear-current-pattern controls,
+immediately visible notes, an arpeggiator, full-song arrangement and volume control,
+and authorized implementation. All synthetic hardware tests must stay at **5% maximum volume**.
 
-- Модель: микшер MASTER + DRUM/T1..T4 с volume/mute/solo; арпеджиатор Off/Up/Down/UpDown,
-  сетка, 1..3 октавы и gate; версия файла v3 с чтением v1/v2.
-- Секвенсор: запуск сцены по глобальной границе такта, реакция песни на изменения длины,
-  запуск с любого элемента и безопасная остановка при изменении цепочки.
-- Движок: фиксированные буферы арпеджиатора для живых и клиповых аккордов,
-  раздельные уровни дорожек, master после лимитера и независимый тестовый потолок 5%.
-- UI: Fn+1..5 / Tab — ударные, синт, сцены, песня, микшер. Сцены 16×5,
-  цепочка до 64 записей с повторами; переходы не перезаписывают сцену 0.
-- Fn+Backspace очищает только содержимое текущего паттерна с undo. Во время записи
-  сначала завершаются удержания и принимаются результаты. Пианоролл следует за высотой
-  и сразу показывает удержанные клавиши, при открытии фокусируется на существующих нотах.
-- Проверки: регрессия ядра/IO/UI, арпеджиатор и завершение голосов, независимость уровней,
-  границы экрана, аппаратные сценарии и нагрузка. Тестовый проект изолирован; его boot
-  принудительно задаёт master 5% и потолок выхода 5%, включая загрузку фикстур и reset.
+## Implementation order
 
-Эффекты delay/reverb/sidechain остаются отдельной частью этапа 5; здесь реализуются
-запрошенные уровни громкости, mute и solo. Арпеджиатор записывает исходный аккорд и настройки,
-а при воспроизведении превращает его в последовательность, сохраняя лимит 64 нот.
+- Model: MASTER + DRUM/T1..T4 mixer with volume/mute/solo; Off/Up/Down/UpDown
+  arpeggiator, grid, 1–3 octaves and gate; file v3 with v1/v2 loading.
+- Sequencer: scene launch on a global bar boundary, song response to length edits,
+  playback from any entry and safe stopping after chain edits.
+- Engine: fixed arpeggiator buffers for live/clip chords, separate track levels,
+  master after the limiter and an independent 5% test ceiling.
+- UI: Fn+1..5 / Tab for Drums, Synth, Scenes, Song, Mixer; 16×5 scenes and up to
+  64 song entries with repeats. Navigation must not overwrite scene 0.
+- Fn+Backspace clears only current-pattern content with undo. During recording,
+  finalize holds and accept results first. Piano roll follows pitch, immediately
+  shows held keys and focuses existing notes on opening.
+- Checks: core/I/O/UI regression, arpeggiator/voice release, independent levels,
+  screen bounds, hardware scenarios and load. Isolate the test project and force
+  master 5% plus output ceiling 5% on boot, fixture import and reset.
 
+Delay/reverb/sidechain remain a separate part of the planned stage 5. This stage
+implements levels, mute and solo. The arpeggiator records the source chord and
+settings, then generates the sequence at playback, preserving the 64-note limit.
 
-## Выполнено
+## Completed
 
-Реализация и установка на Cardputer завершены. Пройдены 172 теста C++ с ASan/UBSan,
-49 тестов Python и четыре аппаратных сценария: новый интерфейс/аранжировка, четыре
-арпеджиатора под нагрузкой, регрессия синта и регрессия ударных. Все — `0 failures`.
+Implementation and installation on Cardputer completed. All 172 C++ tests with
+ASan/UBSan, 49 Python tests and four hardware scenarios passed: UI/arrangement,
+four arpeggiators under load, synth regression and drum regression; all reported
+`0 failures`.
 
-Пики одного аудиоядра: 47,0% для 4 арпеджиаторов с 8 ударными, 47,1% для плотного
-синта на 40 BPM, 49,4% на 240 BPM. Каждый нагрузочный прогон — 60 секунд после прогрева.
-Пул — прежние 5 голосов, частота — 32 кГц. Новых переполнений I2S/событий и ошибок обмена нет.
+Single-audio-core peaks were 47.0% for four arpeggiators with eight drums, 47.1% for
+dense synths at 40 BPM and 49.4% at 240 BPM. Each stress run lasted 60 seconds after
+warmup. The pool remained five voices at 32 kHz. No new I2S/event overflows or
+exchange errors occurred.
 
-Очистка доступна с клавиатуры и подписана на обоих экранах. Пианоролл FIT показывает
-весь диапазон нот, Fn+F возвращает точный масштаб. При записи поверх песни выбирается
-действительно играющая сцена; граница следующей сцены завершает блок. Длительность
-записи считается по неразрывному времени транспорта, а не сбрасываемому времени сцены.
+Clear is available by keyboard and labeled on both screens. FIT shows the entire
+note range; Fn+F returns to precise zoom. Recording over Song targets the scene
+actually playing and ends at the next scene boundary. Note duration uses continuous
+transport time rather than resettable scene time.
 
-У тестов независимый потолок 5% после лимитера, master 5% после каждого reset/import,
-контроль реальных PCM-пиков (не больше 1557) и результатов I2S. При таком уровне
-микрофонный фон не служит обязательным порогом слышимости. Старый probe тоже ограничен
-5%; его сборка проверена, на устройство вместо основной прошивки он не устанавливался.
+Tests have an independent 5% post-limiter ceiling, master 5% after every reset/import,
+actual PCM peak checks (at most 1557) and I2S result checks. Microphone background
+noise is not a mandatory audibility threshold at this level. The old probe was also
+limited to 5% and built, but was not installed in place of the main firmware.
 
-Формат v3 читает v1/v2. Пользовательский проект и backup проверены по контрольным
-значениям после каждого сценария. Полное управление: `docs/stage-4.md`.
+File v3 reads v1/v2. User-project and backup checksums matched after every scenario.
+Controls and reproducible commands: [stage 4 guide](../../stage-4.md).
