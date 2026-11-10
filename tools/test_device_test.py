@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 import device_test
 
@@ -20,6 +21,17 @@ class ParseTests(unittest.TestCase):
 
     def test_silence_is_not_louder_than_silence(self):
         self.assertFalse(device_test.is_louder(0, 0))
+
+
+class CleanupTests(unittest.TestCase):
+    def test_live_microphone_and_transport_are_both_stopped(self):
+        device = Mock()
+        device.state.side_effect = [
+            ({"playing": 1, "busy": 1, "sampler_recording": 1}, {}),
+            ({"playing": 0, "busy": 0}, {}),
+        ]
+        device_test.stop_for_test(device)
+        self.assertEqual([c.args for c in device.key.call_args_list], [("space",), ("6", "f"), ("alt",)])
 
 
 if __name__ == "__main__":

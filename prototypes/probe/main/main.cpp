@@ -135,7 +135,7 @@ bool duplexBlock() {
 void fillTone(float& phase, float amplitude, float frequency = 440.0f) {
     const float step = 2.0f * static_cast<float>(M_PI) * frequency / kRate;
     for (uint32_t i = 0; i < kFrames; ++i) {
-        const auto sample = static_cast<int16_t>(sinf(phase) * amplitude * 32767.0f);
+        const auto sample = static_cast<int16_t>(sinf(phase) * (amplitude > 0.05f ? 0.05f : amplitude) * 32767.0f);
         outBlock[i * 2] = outBlock[i * 2 + 1] = sample;
         phase += step;
         if (phase > 2.0f * static_cast<float>(M_PI)) phase -= 2.0f * static_cast<float>(M_PI);
@@ -320,8 +320,8 @@ void recordWithPlayback() {
     while (fread(mono, sizeof(int16_t), kFrames, file) == kFrames) {
         for (uint32_t i = 0; i < kFrames; ++i) {
             int boosted = mono[i] * kPlaybackGain;
-            if (boosted > 32767) boosted = 32767;
-            if (boosted < -32768) boosted = -32768;
+            if (boosted > 1638) boosted = 1638;
+            if (boosted < -1638) boosted = -1638;
             outBlock[i * 2] = outBlock[i * 2 + 1] = static_cast<int16_t>(boosted);
         }
         duplexBlock();

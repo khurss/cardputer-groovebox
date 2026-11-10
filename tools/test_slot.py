@@ -192,5 +192,22 @@ class AppSlotTests(unittest.TestCase):
         slot.validate_args(["slot.py", "remove-app"])
 
 
+class SamplerPartitionTests(unittest.TestCase):
+    def test_sampler_cache_follows_app_without_overlapping_existing_apps(self):
+        entries = slot.add_app_samples(DEVICE)
+        sample = next(e for e in entries if slot.label(e) == "samples")
+        self.assertEqual(struct.unpack(slot.FORMAT, sample)[3:5], (0x3E0000, 0x400000))
+        self.assertEqual([e for e in entries if slot.label(e) in ("app0", "glide")], [DEVICE[2], DEVICE[4]])
+        self.assertEqual(slot.add_app_samples(entries), entries)
+
+    def test_sampler_install_refuses_occupied_flash(self):
+        with self.assertRaises(ValueError):
+            slot.add_app_samples(DEVICE + [entry(1, 0x82, 0x600000, 0x100000, "user-data")])
+
+    def test_sampler_install_never_relocates_an_unknown_sample_partition(self):
+        with self.assertRaises(ValueError):
+            slot.add_app_samples(DEVICE + [entry(1, 0x82, 0x700000, 0x100000, "samples")])
+
+
 if __name__ == "__main__":
     unittest.main()

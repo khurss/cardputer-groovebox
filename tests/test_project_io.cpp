@@ -180,3 +180,25 @@ TEST(refusesToSaveInvalidProject) {
     CHECK_EQ(saveProjectFile(path.c_str(), bad, buffer, sizeof(buffer)), false);
     CHECK_EQ(loadProjectFile(path.c_str(), loaded(), buffer, sizeof(buffer)) == LoadResult::NotFound, true);
 }
+
+TEST(versionOnePrimaryBecomesLoadableBackupAfterMigration) {
+    const std::string path = tempDir() + "/p.gbp";
+    FILE* fixture = fopen("tests/fixtures/stage2-v1.gbp", "rb");
+    CHECK_EQ(fixture != nullptr, true);
+    if (!fixture) return;
+    const size_t size = fread(buffer, 1, sizeof(buffer), fixture);
+    fclose(fixture);
+    FILE* primary = fopen(path.c_str(), "wb");
+    CHECK_EQ(primary != nullptr, true);
+    if (!primary) return;
+    CHECK_EQ(fwrite(buffer, 1, size, primary), size);
+    fclose(primary);
+    auto& p = loaded();
+    CHECK_EQ(loadProjectFile(path.c_str(), p, buffer, sizeof(buffer)), LoadResult::Ok);
+    p.bpm = 90;
+    CHECK_EQ(saveProjectFile(path.c_str(), p, buffer, sizeof(buffer)), true);
+    corruptFile(path);
+    CHECK_EQ(loadProjectFile(path.c_str(), p, buffer, sizeof(buffer)), LoadResult::OkFromBackup);
+    CHECK_EQ(p.bpm, 133);
+    CHECK_EQ(p.instruments[1][4].notes[0].pitch, 60);
+}

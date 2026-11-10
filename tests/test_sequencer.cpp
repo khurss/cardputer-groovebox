@@ -320,3 +320,69 @@ TEST(eventsBeyondCapacityAreDropped) {
     Event events[3];
     CHECK_EQ(sequencer.render(256, events, 3), 3u);
 }
+
+TEST(overflowUsesReservedPanicAndRecoversAfterZeroCapacity) {
+    auto& p=fresh(); p.scenes[0].pattern[1]=0; auto& n=p.instruments[0][0]; n.noteCount=4;
+    for(int i=0;i<4;++i) n.notes[i]={0,1,static_cast<uint8_t>(60+i),100};
+    Sequencer seq(p,kRate); seq.playScene(0); Event events[3];
+    auto count=seq.render(256,events,3); CHECK_EQ(count,3);
+    CHECK_EQ(events[2].type,EventType::AllNotesOff); CHECK_EQ(seq.overflows(),1);
+    seq.stop(); CHECK_EQ(seq.render(256,nullptr,0),0); count=seq.render(256,events,3);
+    CHECK_EQ(count,1); CHECK_EQ(events[0].type,EventType::AllNotesOff);
+}
+TEST(nearlyFullSwungNoteDoesNotEndImmediatelyAfterStart) {
+    auto& p=fresh(); p.swing=75; p.scenes[0].pattern[1]=0;
+    p.instruments[0][0].noteCount=1; p.instruments[0][0].notes[0]={30,378,60,100};
+    Sequencer seq(p,kRate); seq.playScene(0); const auto events=run(seq,71000);
+    auto on=framesOf(events,EventType::NoteOn),off=framesOf(events,EventType::NoteOff);
+    CHECK_EQ(on[0],5000); CHECK_EQ(off.size()>=1,true);
+    // A stray pre-start NoteOff is harmless; the paired release is at the next loop's tick 30.
+    CHECK_EQ(off.back(),69000);
+}
+
+TEST(noteScheduleCacheTracksEditsGridAndSwing) {
+    for(int mode=0;mode<4;++mode) {
+        auto& p=fresh(); p.swing=75; p.scenes[0].pattern[1]=0;
+        auto& n=p.instruments[0][0]; n.noteCount=1; n.notes[0]={24,24,60,100};
+        Sequencer seq(p,kRate); seq.playScene(0); run(seq,256);
+        if(mode==0) { n.notes[0].startTick=48; n.notes[0].pitch=65; }
+        if(mode==1) p.swing=50;
+        if(mode==2) p.swingEnabled[1]=false;
+        if(mode==3) n.grid=Grid::ThirtySecond;
+        const auto events=run(seq,16000,256);
+        const auto frames=framesOf(events,EventType::NoteOn);
+        CHECK_EQ(frames.empty(),false);
+        if(!frames.empty()) CHECK_EQ(frames[0],mode==0?8000u:4000u);
+        if(!events.empty()) CHECK_EQ(events[0].data,mode==0?65:60);
+    }
+}
+
+TEST(denseWholeCycleNotesReleaseBeforeAnyAttackWithoutOverflow) {
+    auto& p=fresh(); p.bpm=240;
+    for(int lane=0;lane<8;++lane) p.drums[0].velocity[lane][0]=127;
+    for(int t=0;t<4;++t) {
+        p.scenes[0].pattern[t+1]=0;
+        auto& n=p.instruments[t][0]; n.noteCount=64;
+        for(int i=0;i<64;++i) n.notes[i]={0,384,static_cast<uint8_t>(40+i),127};
+    }
+    Sequencer seq(p,kRate); seq.playScene(0); Event events[544];
+    const auto count=seq.render(256,events,544);
+    CHECK_EQ(count,520u); CHECK_EQ(seq.overflows(),0u);
+    for(unsigned i=0;i<256;++i) CHECK_EQ(events[i].type,EventType::NoteOff);
+    for(unsigned i=264;i<count;++i) CHECK_EQ(events[i].type,EventType::NoteOn);
+}
+
+TEST(startingSongDuringPlaybackReleasesOldSceneBeforeNewNotes) {
+    auto& p=fresh(); p.scenes[0].pattern[1]=0; p.scenes[1].pattern[1]=1;
+    p.instruments[0][0].noteCount=1; p.instruments[0][0].notes[0]={0,300,60,100};
+    p.instruments[0][1].noteCount=1; p.instruments[0][1].notes[0]={0,24,64,100};
+    p.songLength=1; p.song[0]={1,1};
+    Sequencer seq(p,kRate); seq.playScene(0); run(seq,256);
+    seq.playSong(0); Event events[8];
+    CHECK_EQ(seq.render(256,events,8),2u);
+    CHECK_EQ(events[0].type,EventType::AllNotesOff);
+    CHECK_EQ(events[0].track,kAllTracks);
+    CHECK_EQ(events[1].type,EventType::NoteOn);
+    CHECK_EQ(events[1].data,64);
+    CHECK_EQ(events[0].frame,events[1].frame);
+}

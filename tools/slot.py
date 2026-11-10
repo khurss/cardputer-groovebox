@@ -18,6 +18,8 @@ SAMPLES_SIZE = 0x400000
 APP_OFFSET = 0x260000
 APP_SIZE = 0x180000
 APP_LABEL = "groovebox"
+APP_SAMPLES_OFFSET = APP_OFFSET + APP_SIZE
+APP_SAMPLES_SIZE = 0x400000
 PORT = "/dev/ttyACM0"
 ROOT = Path(__file__).resolve().parent.parent
 FORMAT = "<HBBII16sI"
@@ -75,6 +77,22 @@ def add_app(entries):
             subtypes.append(subtype)
     next_subtype = max(subtypes, default=0x0F) + 1
     return kept + [struct.pack(FORMAT, 0x50AA, 0, next_subtype, APP_OFFSET, APP_SIZE, APP_LABEL.encode(), 0)]
+
+
+def add_app_samples(entries):
+    # Keep Launcher and every unrelated partition byte-for-byte. Old probe data is disposable.
+    kept = [e for e in entries if label(e) != "probe"]
+    samples = [e for e in kept if label(e) == "samples"]
+    for e in samples:
+        _, _, _, offset, size, _, _ = struct.unpack(FORMAT, e)
+        if (offset, size) not in ((SAMPLES_OFFSET, SAMPLES_SIZE), (APP_SAMPLES_OFFSET, APP_SAMPLES_SIZE)):
+            raise ValueError("unrecognized samples partition; refusing to relocate it")
+    kept = add_app([e for e in kept if label(e) != "samples"])
+    for e in kept:
+        _, _, _, offset, size, _, _ = struct.unpack(FORMAT, e)
+        if offset < APP_SAMPLES_OFFSET + APP_SAMPLES_SIZE and APP_SAMPLES_OFFSET < offset + size:
+            raise ValueError(f"samples slot overlaps partition {label(e)}")
+    return kept + [struct.pack(FORMAT, 0x50AA, 1, 0x82, APP_SAMPLES_OFFSET, APP_SAMPLES_SIZE, b"samples", 0)]
 
 
 def add_probe(entries):
@@ -196,7 +214,7 @@ def main(argv):
             app = Path(argv[2]).read_bytes()
             if len(app) > APP_SIZE:
                 sys.exit("app image does not fit its slot")
-            table = add_app(remove_probe(entries))
+            table = add_app_samples(entries)
             write(work, APP_OFFSET, app)
             write(work, TABLE_OFFSET, build(table))
             write(work, OTADATA_OFFSET, otadata_image(ota_index(table, APP_LABEL)))

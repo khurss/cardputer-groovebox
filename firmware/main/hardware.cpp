@@ -115,12 +115,22 @@ bool initAudio() {
         {0x00, 0x80}, {0x01, 0xBF}, {0x02, 0x18}, {0x0D, 0x01}, {0x0E, 0x02}, {0x12, 0x00},
         {0x13, 0x10}, {0x14, 0x18}, {0x17, 0xBF}, {0x1C, 0x6A}, {0x32, 0xBF}, {0x37, 0x08},
     };
+    const auto configure = [](uint8_t reg, uint8_t value) {
+        for (int attempt = 0; attempt < 3; ++attempt) {
+            if (writeRegister(codec, reg, value)) return true;
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+        return false;
+    };
     bool ok = true;
-    for (const auto& item : init) ok = writeRegister(codec, item[0], item[1]) && ok;
+    for (const auto& item : init) {
+        ok = configure(item[0], item[1]) && ok;
+        if (item[0] == 0x00) vTaskDelay(pdMS_TO_TICKS(10)); // Let codec reset finish before clock setup.
+    }
     // The capture path arms only on a 0x0D write made while the I2S clock is running.
     for (int i = 0; i < 3; ++i) {
         vTaskDelay(pdMS_TO_TICKS(30));
-        ok = writeRegister(codec, 0x0D, 0x01) && ok;
+        ok = configure(0x0D, 0x01) && ok;
     }
     return ok;
 }

@@ -141,3 +141,41 @@ TEST(sceneTickAdvancesWhilePlaying) {
     CHECK_EQ(engine.sceneTick() >= 96u, true);
     CHECK_EQ(engine.sceneTick() < 100u, true);
 }
+
+TEST(synthPlaysFromSequenceAndLiveStopReleasesBothSources) {
+    Project& p=fresh(); p.scenes[0].pattern[1]=0;
+    p.instruments[0][0].noteCount=2;
+    p.instruments[0][0].notes[0]={12,24,60,127}; p.instruments[0][0].notes[1]={12,24,64,127};
+    Engine e(p,kRate); e.handle(make(CommandType::Play)); auto sound=run(e,8192);
+    CHECK_EQ(firstSound(sound)>=2000 && firstSound(sound)<2010,true); CHECK_EQ(peak(sound)>500,true);
+    Command c=make(CommandType::LiveNoteOn,1,67); c.c='z'; c.value=127; e.handle(c);
+    CHECK_EQ(peak(run(e,1024))>500,true); e.handle(make(CommandType::Stop)); run(e,32000);
+    CHECK_EQ(peak(run(e,4096)),0); CHECK_EQ(e.activeVoices(),0);
+}
+TEST(denseFourTrackSequenceDoesNotOverflowEngine) {
+    auto& p=fresh(); p.bpm=240;
+    for(int lane=0;lane<8;++lane) for(int i=0;i<16;++i) p.drums[0].velocity[lane][i]=127;
+    for(int t=0;t<4;++t) {
+        p.scenes[0].pattern[t+1]=0; auto& n=p.instruments[t][0]; n.noteCount=64;
+        for(int i=0;i<64;++i) n.notes[i]={0,1,static_cast<uint8_t>(40+i),127};
+    }
+    Engine e(p,kRate); e.handle(make(CommandType::Play)); auto a=run(e,64000);
+    CHECK_EQ(e.eventOverflows(),0); CHECK_EQ(peak(a)<=31129,true);
+}
+
+TEST(reassigningSameClipDoesNotCutBackingNotes) {
+    auto& p=fresh(); p.scenes[0].pattern[1]=0; p.synths[0].release=0;
+    auto& pattern=p.instruments[0][0]; pattern.noteCount=1; pattern.notes[0]={0,300,60,100};
+    Engine e(p,kRate); e.handle(make(CommandType::Play)); run(e,2048);
+    Command c=make(CommandType::SetScenePattern,0,1); c.c=0; e.handle(c); run(e,256);
+    CHECK_EQ(e.activeVoices(),1);
+}
+
+TEST(overlappingClipNotesAtSamePitchReleaseIndependently) {
+    auto& p=fresh(); p.scenes[0].pattern[1]=0; p.synths[0].release=0;
+    auto& n=p.instruments[0][0]; n.noteCount=2;
+    n.notes[0]={0,24,60,100}; n.notes[1]={12,36,60,100};
+    Engine e(p,kRate); e.handle(make(CommandType::Play));
+    run(e,4096); CHECK_EQ(e.activeVoices(),1u);
+    run(e,8192); CHECK_EQ(e.activeVoices(),0u);
+}

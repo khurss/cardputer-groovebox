@@ -7,7 +7,7 @@
 
 namespace gb {
 
-constexpr size_t kProjectBufferSize = 32 * 1024;
+constexpr size_t kProjectBufferSize = 36 * 1024;
 
 enum class LoadResult : uint8_t {
     Ok,

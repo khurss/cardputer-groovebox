@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Drives the drum machine over USB and measures its speaker with its own microphone."""
+"""Drives the drum machine at a firmware-enforced 5% output ceiling."""
 import os
+from contextlib import contextmanager
 import select
 import sys
 import termios
 import time
 
 PORT = "/dev/ttyACM0"
-LOUDER_RATIO = 4  # 12 dB
+LOUDER_RATIO = 4  # 6 dB power ratio (peak block mean square) at 5% output
 MAX_LOAD_PERMILLE = 500
 
 
@@ -53,12 +54,102 @@ class Device:
             line = self.read_line(max(deadline - time.monotonic(), 0))
             if line is None:
                 raise TimeoutError(f"no line starting with {prefix}")
+            if line.startswith("ERR "):
+                raise RuntimeError(line)
             if line.startswith(prefix):
                 return line
 
     def key(self, name, mods="-"):
         self.send(f"K {mods} {name}")
         self.wait_for("OK")
+
+    def down(self, name, mods="-"):
+        self.send(f"D {mods} {name}")
+        self.wait_for("OK")
+
+    def up(self, name, mods="-"):
+        self.send(f"U {mods} {name}")
+        self.wait_for("OK")
+
+    def instrument(self):
+        self.send("I")
+        fields = parse_fields(self.wait_for("INSTR "))
+        notes = []
+        while True:
+            line = self.read_line(5.0)
+            if line is None:
+                raise TimeoutError("instrument dump ended early")
+            if line.startswith("NOTE "):
+                notes.append(parse_fields(line))
+            elif line == "INSTR-END":
+                return fields, notes
+
+    def sampler(self):
+        self.send("J")
+        fields = parse_fields(self.wait_for("SAMPLER "))
+        slices, pads = [], []
+        while True:
+            line = self.read_line(10.0)
+            if line is None:
+                raise TimeoutError("sampler dump ended early")
+            if line == "SAMPLER-END":
+                return fields, slices, pads
+            if line.startswith("SOURCE "):
+                fields["source"] = line[7:]
+            elif line.startswith("MESSAGE "):
+                fields["message"] = line[8:]
+            elif line.startswith("SLICE "):
+                item = parse_fields(line)
+                item["source"] = line.partition("source=")[2]
+                slices.append(item)
+            elif line.startswith("PAD "):
+                item = parse_fields(line)
+                item["steps"] = line.partition("steps=")[2]
+                pads.append(item)
+
+    def upload_wav(self, data):
+        self.send(f"W begin {len(data)}")
+        self.wait_for("UPLOAD ready")
+        for offset in range(0, len(data), 64):
+            self.send("W data " + data[offset:offset + 64].hex())
+            self.wait_for("UPLOAD data")
+        self.send("W end")
+        self.wait_for("UPLOAD done")
+
+    def arrangement(self):
+        self.send("A")
+        fields = parse_fields(self.wait_for("ARR "))
+        scenes, song, mixer = [], [], []
+        while True:
+            line = self.read_line(5.0)
+            if line is None:
+                raise TimeoutError("arrangement dump ended early")
+            if line == "ARR-END":
+                return fields, scenes, song, mixer
+            for prefix, rows in (("SCENE ", scenes), ("SONG ", song), ("MIX ", mixer)):
+                if line.startswith(prefix):
+                    rows.append(parse_fields(line))
+
+    def hashes(self):
+        self.send("H")
+        result = {}
+        while True:
+            line = self.read_line(5.0)
+            if line is None:
+                raise TimeoutError("hash dump ended early")
+            if line.startswith("HASH "):
+                result[line.split()[1]] = parse_fields(line)
+            elif line == "HASH-END":
+                return result
+
+    def upload_fixture(self, data):
+        self.send(f"V begin {len(data)}")
+        self.wait_for("UPLOAD ready")
+        for offset in range(0, len(data), 64):
+            self.send("V data " + data[offset:offset + 64].hex())
+            self.wait_for("UPLOAD data")
+        self.send("V end")
+        self.wait_for("UPLOAD done")
 
     def state(self):
         self.send("S")
@@ -76,7 +167,10 @@ class Device:
 
     def level(self, ms):
         self.send(f"L {ms}")
-        return parse_fields(self.wait_for("LEVEL", ms / 1000 + 5))["peak"]
+        fields = parse_fields(self.wait_for("LEVEL", ms / 1000 + 5))
+        if fields["output_peak"] > 1557:
+            raise RuntimeError(f"test signal exceeded 5% ceiling: {fields}")
+        return fields["output_power"]
 
     def cpu(self):
         self.send("C")
@@ -133,7 +227,7 @@ def reset_device():
     slot.esptool("chip_id")
 
 
-def run():
+def _run_checks():
     report = Report()
     device = open_device()
     device.wait_ready()
@@ -155,7 +249,7 @@ def run():
     print(device.wait_for("FS"))
 
     quiet = device.level(500)
-    print(f"INFO quiet peak {quiet}")
+    print(f"INFO quiet power {quiet}")
 
     device.key("2")  # Snare, audible on a small speaker.
     time.sleep(0.6)
@@ -169,7 +263,7 @@ def run():
     playing = device.level(2000)
     fields, _ = device.state()
     report.check("playing", fields["playing"] == 1)
-    report.check("speaker heard while playing", is_louder(playing, quiet), f"{playing} vs {quiet}")
+    report.check("audio rendered at 5 percent while playing", is_louder(playing, quiet), f"{playing} vs {quiet}")
     cpu = device.cpu()
     report.check("cpu load", cpu["load_permille"] <= MAX_LOAD_PERMILLE, f"{cpu['load_permille'] / 10}%")
     report.check("audio exchange failures", cpu["failures"] == 0, str(cpu["failures"]))
@@ -230,6 +324,73 @@ def run():
 
     print(f"{report.failures} failures")
     return 1 if report.failures else 0
+
+
+def stop_for_test(device):
+    fields, _ = device.state()
+    if fields["playing"]:
+        device.key("space")
+    if fields.get("sampler_recording"):
+        device.key("6", "f")
+        device.key("alt")
+    elif not fields["playing"] and fields.get("busy") and not fields.get("sampler_busy"):
+        device.key("alt")
+    deadline = time.monotonic() + 60
+    while True:
+        fields, _ = device.state()
+        if not fields["playing"] and not fields.get("busy", 0):
+            return
+        if time.monotonic() >= deadline:
+            raise TimeoutError("transport or recorder did not stop")
+        time.sleep(0.02)
+
+
+@contextmanager
+def isolated_project():
+    """Use a separate SD project across resets; verify the user's files are unchanged."""
+    device = open_device()
+    device.wait_ready()
+    stop_for_test(device)
+    original = device.hashes()
+    try:
+        device.send("T begin")
+        device.wait_for("TEST begin")
+        time.sleep(0.6)
+    finally:
+        os.close(device.fd)
+    try:
+        device = open_device()
+        try:
+            device.wait_ready()
+            fields, _ = device.state()
+            if fields.get("test_mode") != 1 or fields.get("output_limit") != 5 or fields.get("master") != 5:
+                raise RuntimeError("isolated test mode was not activated")
+        finally:
+            os.close(device.fd)
+        yield
+    finally:
+        device = open_device()
+        try:
+            device.wait_ready()
+            stop_for_test(device)
+            device.send("T end")
+            device.wait_for("TEST end")
+            time.sleep(0.6)
+        finally:
+            os.close(device.fd)
+        device = open_device()
+        try:
+            device.wait_ready()
+            if device.hashes() != original:
+                raise RuntimeError("user project files changed during the test")
+            print("PASS user project and backup unchanged")
+        finally:
+            os.close(device.fd)
+
+
+def run():
+    with isolated_project():
+        return _run_checks()
 
 
 if __name__ == "__main__":

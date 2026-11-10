@@ -3,7 +3,7 @@
 # because ESP-IDF hard-codes FF_FS_EXFAT to 0 and the user's 200 GB card is probably exFAT.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-IMAGE="${GB_IDF_IMAGE:-cbc2e2ec2afe}"
+IMAGE="${GB_IDF_IMAGE:-espressif/idf:v5.5.1}"
 PROJECT="${1:?usage: tools/idf.sh <project-dir> <idf.py args...>}"
 shift
 exec docker run --rm -v "$ROOT:/work" -w "/work/$PROJECT" -u "$(id -u):$(id -g)" -e HOME=/tmp "$IMAGE" bash -c '

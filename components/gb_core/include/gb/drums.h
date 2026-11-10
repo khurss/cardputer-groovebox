@@ -35,10 +35,13 @@ private:
     };
 
     float nextNoise();
+    void configure(uint8_t lane, const DrumSound& sound);
 
     uint32_t rate_;
     uint32_t noiseState_ = 0x12345678u;
     Voice voices_[kDrumLanes];
+    Voice presets_[kDrumLanes];
+    DrumSound cachedSounds_[kDrumLanes];
 };
 
 }  // namespace gb

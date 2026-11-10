@@ -94,6 +94,8 @@ void DrumUi::onPress(char code) {
 
 void DrumUi::onFnPress(char code) {
     switch (code) {
+        case '-': changeBpm(-1); break;
+        case '=': changeBpm(1); break;
         case 'l': cycleLength(); break;
         case 'g': cycleGrid(); break;
         case 'w': cycleSwing(); break;
@@ -184,14 +186,25 @@ void DrumUi::applyPatternContents(const DrumPattern& contents) {
 
 void DrumUi::clearPattern() {
     rememberForUndo();
-    applyPatternContents(DrumPattern{});
+    auto cleared=currentDrums();
+    for(auto& lane:cleared.velocity) for(auto& velocity:lane) velocity=0;
+    applyPatternContents(cleared);
 }
 
+void DrumUi::activate() {
+    if(project_.scenes[editScene_].pattern[0]!=pattern_) apply(command(CommandType::SetScenePattern,editScene_,0,pattern_));
+}
+void DrumUi::setScene(uint8_t scene) {
+    if(scene>=kScenes) return;
+    editScene_=scene;
+    if(project_.scenes[scene].pattern[0]>=0) pattern_=project_.scenes[scene].pattern[0];
+    dirty_=true;
+}
 void DrumUi::selectPattern(int pattern) {
     if (pattern < 0 || pattern >= kPatternsPerTrack) return;
     undoAvailable_ = false;
     pattern_ = pattern;
-    apply(command(CommandType::SetScenePattern, 0, 0, static_cast<uint8_t>(pattern_)));
+    apply(command(CommandType::SetScenePattern, editScene_, 0, static_cast<uint8_t>(pattern_)));
 }
 
 void DrumUi::cycleLength() {
@@ -199,6 +212,13 @@ void DrumUi::cycleLength() {
     const uint8_t current = currentDrums().length;
     const uint16_t next = current == 4 ? 8 : (current == 8 ? 16 : 4);
     apply(command(CommandType::SetLength, static_cast<uint8_t>(pattern_), 0, 0, next));
+}
+void DrumUi::setTiming(bool grid, uint16_t value) {
+    auto c = command(grid ? CommandType::SetGrid : CommandType::SetLength, static_cast<uint8_t>(pattern_), 0, 0, value);
+    if (!isValidCommand(c)) return;
+    gridRun_ = false;
+    rememberForUndo();
+    apply(c);
 }
 
 void DrumUi::cycleGrid() {
@@ -280,6 +300,7 @@ void DrumUi::draw(Canvas& canvas, uint32_t sceneTick, bool playing, bool storage
     const DrumSound& sound = project_.sounds[lane_];
     snprintf(line, sizeof(line), "%s", kLaneNames[lane_]);
     canvas.text(0, kFooterTop, line, color::Text);
+    canvas.text(174,kFooterTop,"Fn+BS CLR",color::Text);
     snprintf(line, sizeof(line), "TUNE %u DEC %u TONE %u LVL %u", sound.tune, sound.decay, sound.tone, sound.level);
     canvas.text(0, kFooterTop + 10, line, color::Text);
 }
