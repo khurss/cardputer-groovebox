@@ -30,6 +30,8 @@ public:
     void stop();
     bool playing() const { return playing_; }
 
+    uint32_t sceneTick() const { return sceneTick_; }
+
     // Returns the number of events written to `out`. Events beyond `capacity` are dropped.
     uint32_t render(uint32_t frames, Event* out, uint32_t capacity);
 
