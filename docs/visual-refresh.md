@@ -9,7 +9,7 @@ drawing code, rendered at 2× size. [All guides](README.md)
 
 ![Scenes, sampler files, waveform, pads, menu and projects](images/sampler-projects.png)
 
-For the subsequent FFT mixer, four audio visualizations, bare-arrow controls and
+For the subsequent Equalizer FFT, four audio visualizations, bare-arrow controls and
 RGB feedback, see the [audio visuals guide](audio-visuals.md).
 
 ## Shared appearance and navigation

@@ -14,7 +14,7 @@ const char* const lessons[][7] = {
     {"SAMPLES / 6", "Fn+6: sampler. Put WAV on SD in", "/groovebox/samples/", "ACTIONS: Browse WAV or Record mic.", "Wave view: A=start, D=end.", "ENTER saves a slice to a pad.", "Pad sequencer places sample hits."},
     {"BUILD A SONG / 7", "Fn+3: scenes combine patterns.", "Choose track and assigned pattern.", "Fn+4: song. Insert scenes via menu.", "Set repeats, ENTER plays from row.", "Fn+5: mixer levels / mute / solo.", "SPACE stops. + / - sets volume."},
     {"KEEP YOUR WORK / 8", "OPT > SCREENS > Projects.", "New: blank project with a name.", "Save: write current project.", "Save copy: keep another version.", "Open: saves current, then reloads.", "Auto-save: stopped, 3 seconds idle."},
-    {"AUDIO VISUALS / 9", "Fn+7: mixer with live FFT spectrum.", "Fn+8: four audio visualizations.", "LEFT/RIGHT: view. UP/DOWN: gain.", "P: palette. OPT > SETTINGS: motion.", "RGB brightness: 0 disables the LED.", "RGB on uses full display backlight."}
+    {"AUDIO VISUALS / 9", "Fn+7: 7-band EQ with output FFT.", "Fn+8: four audio visualizations.", "LEFT/RIGHT: view. UP/DOWN: gain.", "P: palette. OPT > SETTINGS: motion.", "RGB brightness: 0 disables the LED.", "RGB on uses full display backlight."}
 };
 }
 ProjectAction AppUi::takeProjectRequest(char* name, size_t size) {

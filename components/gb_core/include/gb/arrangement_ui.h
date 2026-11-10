@@ -24,6 +24,7 @@ public:
     uint8_t songEntry() const { return entry_; }
     uint8_t column() const { return column_; }
     uint8_t mixerStrip() const { return mix_; }
+    uint8_t eqBand() const { return eqBand_; }
     bool editingRepeats() const { return songField_ != 0; }
     uint32_t edits() const { return edits_; }
     bool canUndo() const { return undoAvailable_; }
@@ -40,10 +41,12 @@ private:
     void sceneKey(char code, bool fn);
     void songKey(char code, bool fn);
     void mixerKey(char code, bool fn, bool shift);
+    void equalizerKey(char code,bool shift);
     Project& p_;
     CommandSink sink_;
     void* context_;
     uint8_t scene_ = 0, column_ = 0, entry_ = 0, songField_ = 0, mix_ = 0;
+    uint8_t eqBand_ = 0;
     uint32_t status_ = 0, edits_ = 0;
     Command undo_;
     Scene clipboard_;

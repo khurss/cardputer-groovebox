@@ -97,7 +97,7 @@ Twenty-second chorus previews:
 [Liquid Signal WAV](previews/liquid-signal.wav).
 
 ```bash
-make demos         # regenerate all seven .gbp files in examples/projects
+make demos         # regenerate all seven projects in the current GBP v6 format
 make render-demos  # full WAVs in build/demo-audio; excerpts in build/demo-previews
 ```
 

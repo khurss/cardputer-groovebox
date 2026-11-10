@@ -40,7 +40,7 @@ the menu from a main workspace. [Follow the full first-track guide →](docs/qui
 | **Sampler** | Import WAV from microSD or record the microphone; select and chop waveforms into 32 sample slots for eight sequencer pads |
 | **Scenes and Song** | Combine six tracks into 16 scenes and up to 64 song entries; minimap play markers and scrolling keep the playing row visible |
 | **Mixer** | Set master and six track levels, with per-track mute and solo |
-| **Audio visuals and RGB** | Master FFT mixer, spectrum/wave/waterfall/orbit modes, four palettes and audio-reactive LED |
+| **Audio visuals and RGB** | Seven-band master EQ with output FFT, spectrum/wave/waterfall/orbit modes, four palettes and audio-reactive LED |
 | **Projects** | Create named `.gbp` files, autosave, keep a backup, save copies and reopen your last project |
 
 ![Cardputer sampler waveform editor, pad sequencer, scenes, WAV browser, menu and project manager](docs/images/sampler-projects.png)
@@ -48,17 +48,17 @@ the menu from a main workspace. [Follow the full first-track guide →](docs/qui
 The four synth tracks and live playing share **five synth voices**, reduced to four
 while samples play. The sampler provides four playback voices and roughly
 65 seconds of total decoded sample storage. Each synth pattern holds up to
-64 notes. Projects are saved as GBP v5 and can be loaded from v1–v5; WAV audio is
+64 notes. Projects are saved as GBP v6 and can be loaded from v1–v6; WAV audio is
 referenced separately, so transfer the `samples` folder with your projects.
 
 ## Audio-reactive visuals
 
-Press **Fn+7** for a mixer with a live FFT spectrum, or **Fn+8** for four configurable
+Press **Fn+7** for a seven-band audio equalizer with live output FFT, or **Fn+8** for four configurable
 visualizations. Choose colors, sensitivity, smoothing and motion in SETTINGS.
 Wave automatically fits quiet passages and loud peaks. The RGB LED follows instrument
 and song audio with saturated, held colors and adjustable brightness.
 
-![FFT mixer and four configurable audio-reactive visualizations](docs/images/audio-visuals.png)
+![Equalizer FFT and four configurable audio-reactive visualizations](docs/images/audio-visuals.png)
 
 Bare arrows navigate editors and menus; Performance preserves their musical keys.
 The synth opens in Performance by default. [Visuals, controls and RGB details →](docs/audio-visuals.md)
@@ -86,7 +86,7 @@ volume**. [Listen to previews and explore the arrangements →](examples/README.
 ## Documentation
 
 - [Quick start: make your first track](docs/quick-start.md)
-- [FFT mixer, visualizations and RGB LED](docs/audio-visuals.md)
+- [Equalizer FFT, visualizations and RGB LED](docs/audio-visuals.md)
 - [Menu navigation and settings](docs/menu.md)
 - [Keyboard shortcuts and layouts](docs/controls.md)
 - [Projects, saving and recovery](docs/projects.md)

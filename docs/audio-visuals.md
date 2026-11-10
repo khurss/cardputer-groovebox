@@ -1,32 +1,58 @@
-# Audio visuals, FFT mixer and RGB feedback
+# Audio visuals, Equalizer FFT and RGB feedback
 
-**Fn+7** opens **Mixer FFT**. **Fn+8** opens **Visuals**. Both are also available
+**Fn+7** opens **Equalizer FFT**. **Fn+8** opens **Visuals**. Both are also available
 under **Opt → SCREENS** and in the eight-workspace Tab cycle.
 [All guides](README.md) · [Keyboard controls](controls.md)
 
-![FFT mixer, spectrum, waveform, waterfall, orbit and visual settings](images/audio-visuals.png)
+![Equalizer FFT, spectrum, waveform, waterfall, orbit and visual settings](images/audio-visuals.png)
 
 These views analyze the actual mixed output, including drums, synths and samples.
 They respond to live playing as well as recorded scenes and songs. Master mute or
 zero output produces silence in the analyzer; a synth's release remains visible
 and audible after transport stops until the note fades out.
 
-## Mixer FFT
+## Equalizer FFT
 
-![Master spectrum above the seven mixer strips](images/mixer-fft.png)
+![Seven-band master equalizer below the output spectrum](images/equalizer-fft.png)
 
-The upper half shows a colored spectrum of the **master output**. The lower half
-controls the same MAIN, DRUM, T1..T4 and SMP levels as the original Mixer.
+**Fn+7** replaces the former Mixer/FFT workspace with a real master audio EQ.
+The ordinary channel mixer remains on **Fn+5**. All drums, synths and samples pass
+through this EQ after channel mixing and before the limiter and MAIN volume.
+The spectrum above it measures the final output, so it includes EQ, limiting,
+master-volume changes and bypass.
 
-- **Left/right** selects a strip; **up/down** changes its level by 5%, or 1% with Shift.
-- **M / S** toggles track mute/solo. MAIN has neither.
-- **Fn+Z** undoes the last mixer edit.
-- Plain **+ / −** always changes MAIN; Ctrl gives 1% steps.
-- **Opt → SETTINGS** contains channel controls, palette, sensitivity, smoothing
-  and RGB brightness.
+| Band | Center frequency | Range |
+|---|---|---|
+| Sub/bass | 63 Hz | −12 to +12 dB |
+| Bass | 160 Hz | −12 to +12 dB |
+| Low mids | 400 Hz | −12 to +12 dB |
+| Mids | 1 kHz | −12 to +12 dB |
+| Presence | 2.5 kHz | −12 to +12 dB |
+| Treble | 6.3 kHz | −12 to +12 dB |
+| High treble | 12 kHz | −12 to +12 dB |
 
-The spectrum is for the combined output, not a separate FFT for each strip. Fader
-bars display configured levels rather than measured channel peaks.
+- **Left/right:** select a band. **Up/down:** change gain by 1 dB; Shift gives 3 dB.
+- **B:** bypass/re-enable processing while keeping the gains for comparison.
+- **0:** reset the selected band to 0 dB. **Shift+0:** reset all bands, keeping bypass state.
+- **Fn+Z:** undo the last EQ or mixer edit, including a full reset.
+- Plain **+ / −:** MAIN volume; Ctrl gives 1% steps. Space controls playback.
+- **Opt → SETTINGS:** band, gain, bypass, palette, FFT sensitivity and RGB brightness.
+  **ACTIONS** also offers bypass, reset and undo.
+
+All seven gains start at 0 dB. Gains and bypass state are saved in **GBP v6 projects**,
+including autosave, project copies and reloads. Projects from v1–v5 open with flat EQ.
+The selected band is an editor cursor and is not saved. Old firmware that only
+supports v5 cannot open a new v6 save. Bundled v5 demos remain compatible.
+
+Each band is a fixed-center, Q=1 peaking biquad using the
+[RBJ/W3C Audio EQ Cookbook coefficients](https://www.w3.org/TR/audio-eq-cookbook/).
+Coefficient changes ramp over 512 samples (16 ms at 32 kHz); bypass uses a short
+fade. The EQ uses fixed storage and does not allocate during rendering. The
+existing output limiter and the 5% test ceiling remain after EQ. Large boosts can
+engage the limiter, so the final output may increase less than the band setting.
+This is a master EQ, shared by all tracks; it does not provide per-track EQ or
+movable center frequencies. FFT **Sensitivity** only changes the display and LED
+response; the band's **dB gain** changes the sound.
 
 ## Four visualizations
 
@@ -103,17 +129,34 @@ precision audio measurement.
 make test
 python3 -m unittest discover -s tools -p 'test_*.py'
 python3 tools/device_audio_visual_test.py
-python3 tools/device_sampler_test.py --stress
+python3 tools/device_equalizer_test.py
+python3 tools/device_sampler_test.py --stress --eq
 make render-interface
 ```
 
 The hardware tests enforce 5% output, use isolated projects and verify that the
-normal project and backup remain unchanged. USB command `B` reports analysis frames,
+normal project and backup remain unchanged. USB command `E` reports the selected EQ band, seven gains and bypass state.
+USB command `B` reports analysis frames,
 peak, dominant bin, FFT time, visual settings and RGB transmission status. It cannot
 optically verify the LED's emitted color. `make render-interface` regenerates the
 documentation images using the application drawing code and demo-engine PCM at 5%.
 
-### Device measurements for this update
+### Equalizer validation
+
+Host checks measure every band's center-frequency response at +12 and −12 dB,
+flat/bypass behavior, rapid edits, the output ceiling, project migration and
+round-trip saving. On-device tests measure a quiet tone near 1 kHz in the actual
+output PCM: boost raises it, cut reduces it, and bypass restores the original
+level. They also verify reset/undo and persistence after a reboot.
+
+A 60-second device stress scenario enables all seven bands at +12 dB while four
+synth voices, eight drums, four sample voices and SD microphone recording run
+together. Peak audio load was **45.9%**, with no new I2S/event overflows, exchange
+errors or dropped recording blocks. All audible checks use the independent 5%
+output ceiling. These are measurements of the tested scenarios, not a guarantee
+for every possible arrangement.
+
+### Earlier visualization measurements
 
 The automated audio-visual scenario passed at 5% output: the measured FFT maximum
 was 0.92 ms and display-frame maximum about 15.6 ms. Neon Drive chorus playback

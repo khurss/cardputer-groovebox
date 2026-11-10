@@ -88,7 +88,7 @@ from **Projects → Add demo songs**, load it, then press `Fn+4` and `Enter`.
 
 ## 8. Add visuals and RGB feedback
 
-Press `Fn+7` for the FFT mixer, or `Fn+8` for four audio-reactive visualizations.
+Press `Fn+7` for the Equalizer FFT, or `Fn+8` for four audio-reactive visualizations.
 Use bare left/right to change visual mode and up/down for sensitivity. P changes
 colors. Opt → SETTINGS includes smoothing, motion and RGB brightness; 0% turns the
 LED off. [Visuals and RGB guide](audio-visuals.md)

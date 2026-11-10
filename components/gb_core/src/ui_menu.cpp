@@ -6,7 +6,7 @@
 namespace gb {
 namespace {
 using O = MenuOp;
-constexpr const char* screens[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER", "MIX FFT", "VISUALS"};
+constexpr const char* screens[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER", "EQ FFT", "VISUALS"};
 constexpr const char* grids[] = {"1/4", "1/8", "1/16", "1/32", "1/8T", "1/16T"};
 constexpr const char* waves[] = {"SINE", "TRIANGLE", "SAW", "SQUARE"};
 constexpr const char* arps[] = {"OFF", "UP", "DOWN", "UP/DOWN"};
@@ -21,7 +21,7 @@ constexpr MenuItem navigation[] = {
     {"Projects", "New / open / save / save a copy", O::Projects},
     {"Quick start", "First track in nine short steps", O::Help},
     {"Key reference", "Shortcuts for the current screen", O::KeyHelp},
-    {"Mixer FFT", "Mix levels with live output spectrum", O::Screen, 6},
+    {"Equalizer FFT", "Seven frequency bands / output FFT", O::Screen, 6},
     {"Visuals", "Four audio-reactive views", O::Screen, 7}
 };
 constexpr MenuItem globals[] = {
@@ -133,11 +133,16 @@ constexpr MenuItem visualSettings[] = {
     {"Smoothing", "Spectrum / Wave scale release", O::VisualParameter, 3},
     {"Motion speed", "Waterfall scroll / orbit rotation", O::VisualParameter, 4}
 };
+constexpr MenuItem eqActions[] = {
+    {"Play / stop", "Space also controls playback", O::Play},
+    {"Bypass EQ", "B: compare with unprocessed mix", O::EqBypass},
+    {"Reset all bands", "Shift+0: flat; undo available", O::EqFlat},
+    {"Undo", "Undo last EQ or mixer edit", O::Shortcut, 'z'}
+};
 constexpr MenuItem fftSettings[] = {
-    {"Channel", "Left/right selects a mixer strip", O::Strip},
-    {"Channel level", "Up/down adjusts; Shift: fine", O::Level},
-    {"Mute channel", "Mute selected channel", O::Mute},
-    {"Solo channel", "Solo selected channel", O::Solo},
+    {"Frequency band", "Left/right selects a fixed band", O::EqBand},
+    {"Band gain", "Up/down: 1 dB; Shift: 3 dB", O::EqGain},
+    {"Bypass EQ", "Compare processed and dry audio", O::EqBypass},
     {"Palette", "Color palette for spectrum and LED", O::VisualParameter, 1},
     {"Sensitivity", "Display gain only; audio unchanged", O::VisualParameter, 2},
     {"Smoothing", "Spectrum release: fast to slow", O::VisualParameter, 3}
@@ -145,7 +150,7 @@ constexpr MenuItem fftSettings[] = {
 template<size_t N> constexpr unsigned count(const MenuItem (&)[N]) { return N; }
 unsigned contextCount(uint8_t page, uint8_t screen) {
     if (page == 1) {
-        const unsigned sizes[] = {count(drumActions), count(synthActions), count(sceneActions), count(songActions), count(mixerActions), count(samplerActions), count(mixerActions), count(visualActions)};
+        const unsigned sizes[] = {count(drumActions), count(synthActions), count(sceneActions), count(songActions), count(mixerActions), count(samplerActions), count(eqActions), count(visualActions)};
         return sizes[screen];
     }
     const unsigned sizes[] = {count(drumSettings), count(synthSettings), count(sceneSettings), count(songSettings), count(mixerSettings), count(samplerSettings), count(fftSettings), count(visualSettings)};
@@ -167,7 +172,7 @@ MenuItem AppUi::menuItem(uint8_t page, unsigned row) const {
     if (page == 2 && row == menuCount(page)-1) return {"RGB brightness", "0: off; on requires full backlight", O::VisualParameter, 5};
     if (page == 2 && row < count(globals)) return globals[row];
     if (page == 2) row -= count(globals);
-    const MenuItem* actions[] = {drumActions, synthActions, sceneActions, songActions, mixerActions, samplerActions, mixerActions, visualActions};
+    const MenuItem* actions[] = {drumActions, synthActions, sceneActions, songActions, mixerActions, samplerActions, eqActions, visualActions};
     const MenuItem* settings[] = {drumSettings, synthSettings, sceneSettings, songSettings, mixerSettings, samplerSettings, fftSettings, visualSettings};
     return (page == 1 ? actions : settings)[screen_][row];
 }
@@ -183,7 +188,7 @@ void AppUi::shortcut(char code) {
         if (code == 'z') sampler_.undoPattern();
         else sampler_.onKey(code, true, shift_);
     }
-    else arrangement_.onKey(screen_ == 6 ? 4 : screen_, code, true, shift_);
+    else arrangement_.onKey(screen_, code, true, shift_);
 }
 void AppUi::menuApply(Command c) {
     if (sink_(context_, c)) { applyEdit(project_, c); ++menuEdits_; }
@@ -257,6 +262,8 @@ void AppUi::menuKey(char code) {
 }
 void AppUi::menuRun(const MenuItem& item) {
     switch (item.op) {
+        case O::EqBypass: arrangement_.onKey(6,'b',false,false);break;
+        case O::EqFlat: arrangement_.onKey(6,'0',false,true);break;
         case O::FollowPlayback: arrangement_.onKey(screen_,'f',false,false); menuOpen_=false; break;
         case O::VisualParameter: visual_.adjust(item.argument, 1); break;
         case O::Performance:
@@ -306,6 +313,9 @@ void AppUi::menuValue(const MenuItem& item, char* value, size_t size) const {
     const auto& s = project_.synths[track];
     const DrumPattern& timing = screen_ == 5 ? project_.samplePatterns[sampler_.pattern()].steps : project_.drums[drums_.currentPattern()];
     switch (item.op) {
+        case O::EqBand: text=kEqLabels[arrangement_.eqBand()];break;
+        case O::EqGain: snprintf(value,size,"%+d dB",project_.equalizer.gain[arrangement_.eqBand()]);return;
+        case O::EqBypass: text=project_.equalizer.enabled?"OFF":"ON";break;
         case O::VisualParameter: {
             const auto& v = visual_.settings();
             if (item.argument == 0) text = AudioVisual::modeName(v.mode);
@@ -373,6 +383,11 @@ void AppUi::menuAdjust(const MenuItem& item, int direction) {
     const uint8_t lengths[] = {4, 8, 16};
     Command c;
     switch (item.op) {
+        case O::EqBand: arrangement_.onKey(6,direction>0?'/':',',false,false);return;
+        case O::EqGain: arrangement_.onKey(6,direction>0?';':'.',false,shift_);return;
+        case O::EqBypass:
+            if(project_.equalizer.enabled==(direction>0))arrangement_.onKey(6,'b',false,false);
+            return;
         case O::VisualParameter: visual_.adjust(item.argument,direction); return;
         case O::Preset: instrument_.loadPreset((instrument_.preset() + 6 + direction) % 6); return;
         case O::Layout: instrument_.setKeyboard(0, direction > 0); return;

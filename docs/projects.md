@@ -45,10 +45,12 @@ restarts into it. The damaged original and its backup remain on the card.
 
 ## Transfer projects between cards or computers
 
-A project contains patterns, scenes, song entries, mixer and synth settings,
+A project contains patterns, scenes, song entries, mixer, master equalizer and synth settings,
 root/scale/layout, and WAV references with slice boundaries. **Audio is not embedded
 in `.gbp` files.** Copy both `/groovebox/projects/` and `/groovebox/samples/` when
 transferring your work. A project copy shares the original WAV files.
 
-The firmware reads GBP v1–v5 and writes v5. Older firmware without v5 support cannot
-open new saves. [Sampler storage and cache details](stage-5-sampler.md#storage-and-project-format)
+The firmware reads GBP v1–v6 and writes v6. Older firmware without v6 support cannot
+open new saves. Projects from v1–v5 load with a flat, enabled equalizer. EQ gains
+and bypass state belong to each project; visual sensitivity and palettes remain
+device-wide preferences. [Sampler storage and cache details](stage-5-sampler.md#storage-and-project-format)

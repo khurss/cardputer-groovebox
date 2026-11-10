@@ -71,7 +71,7 @@ of sounding notes.
 
 Attack and decay reach two seconds, release four seconds, and glide one second.
 Synth parameters and quantize settings save with the notes. The current firmware
-reads GBP v1–v5 and saves v5. See [projects](projects.md) for backup and recovery.
+reads GBP v1–v6 and saves v6. See [projects](projects.md) for backup and recovery.
 
 ## Developer checks
 

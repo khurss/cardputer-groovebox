@@ -16,12 +16,14 @@ Engine::Engine(Project& project, uint32_t sampleRate)
       synth_(sampleRate),
       recorder_(project, sequencer_),
       arp_(sampleRate),
+      equalizer_(sampleRate),
       releaseCoefficient_(1.0f - std::exp(-1.0f / (kReleaseSeconds * sampleRate))) {
     for (uint8_t t = 0; t < kInstrumentTracks; ++t) {
         synth_.setSound(t, project.synths[t]);
         arp_.configure(t, project.arps[t], project.bpm, synth_);
     }
     updateMixer();
+    equalizer_.configure(project.equalizer,true);
     masterGain_ = masterTarget_;
 }
 void Engine::releaseClip(uint8_t track) {
@@ -71,6 +73,8 @@ void Engine::handle(const Command& c) {
         c.type == CommandType::PlaySong)
         ++transportSerial_;
     switch (c.type) {
+        case CommandType::SetEqualizer:
+            applyEdit(project_,c);equalizer_.configure(project_.equalizer);break;
         case CommandType::SilenceSamples:
             samples_.stop();
             sampleEpoch_.fetch_add(1);
@@ -280,7 +284,7 @@ GB_AUDIO_CODE void Engine::renderBlock(int16_t* stereo, uint32_t frames) {
             }
         }
         if (arp_.active()) arp_.render(frames_ + frame, synth_);
-        const int16_t out = limit((rack_.render() * drumGain_ + synth_.render() + samples_.render() * sampleGain_) * kMasterGain);
+        const int16_t out = limit(equalizer_.process((rack_.render() * drumGain_ + synth_.render() + samples_.render() * sampleGain_) * kMasterGain));
         stereo[2 * frame] = stereo[2 * frame + 1] = out;
     }
     frames_ += frames;

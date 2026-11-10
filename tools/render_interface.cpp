@@ -33,11 +33,13 @@ int main(){gb::makeDemoProject(0,p);gb::AppUi ui(p,sink,nullptr);Dump c;bool ren
  key(gb::key::Opt);
  static gb::Project audioProject;gb::makeDemoProject(0,audioProject);
  audioProject.masterVolume=5;
+ const int8_t eqGains[]={3,1,-2,0,2,1,-1};
+ std::copy(eqGains,eqGains+gb::kEqBands,audioProject.equalizer.gain);p.equalizer=audioProject.equalizer;
  gb::Engine engine(audioProject,32000);
  gb::Command play;play.type=gb::CommandType::PlaySong;play.a=12;engine.handle(play);
  int16_t pcm[1024];gb::AudioFrame frame,best;
  auto advance=[&](){unsigned loudest=0;for(int n=0;n<96;++n){engine.render(pcm,512);unsigned peak=0;for(unsigned i=0;i<gb::kFftSize;++i){frame.mono[i]=pcm[i*2];peak=std::max(peak,unsigned(std::abs(int(frame.mono[i]))));}ui.audioFrame(frame);if(peak>loudest){loudest=peak;best=frame;}}if(ui.visual().settings().mode==1)ui.audioFrame(best);};
- renderPlaying=true;ui.setPlayback(true);advance();key('7',true);draw(13);
+ renderPlaying=true;ui.setPlayback(true);advance();key('7',true);key('/');key('/');draw(13);
  key('8',true);
  for(int mode=0;mode<4;++mode){auto settings=ui.visual().settings();settings.palette=mode;settings.gain=3;ui.visual().setSettings(settings);advance();draw(14+mode);key('/');}
  key(gb::key::Opt);key(gb::key::Tab);key(gb::key::Tab);draw(18);

@@ -59,6 +59,24 @@ void ArrangementUi::onKey(uint8_t screen, char code, bool fn, bool shift) {
         songKey(code, fn);
     else if (screen == 4)
         mixerKey(code, fn, shift);
+    else if(screen==6)equalizerKey(code,shift);
+}
+void ArrangementUi::equalizerKey(char code,bool shift) {
+    if(code==',' || code=='/') { eqBand_=clamp(eqBand_+(code=='/'?1:-1),0,kEqBands-1);return; }
+    auto next=p_.equalizer;
+    if(code==';' || code=='.' || code=='=' || code=='-')
+        next.gain[eqBand_]=clamp(next.gain[eqBand_]+((code==';'||code=='=')?1:-1)*(shift?3:1),-12,12);
+    else if(code=='b')next.enabled=!next.enabled;
+    else if(code=='0') {
+        if(shift)for(auto& gain:next.gain)gain=0;
+        else next.gain[eqBand_]=0;
+    } else return;
+    bool changed=next.enabled!=p_.equalizer.enabled;
+    for(int i=0;i<kEqBands;++i)changed|=next.gain[i]!=p_.equalizer.gain[i];
+    if(changed) {
+        auto c=command(CommandType::SetEqualizer),old=c;
+        c.equalizer=next;old.equalizer=p_.equalizer;apply(c,old);
+    }
 }
 void ArrangementUi::sceneKey(char code, bool fn) {
     if ((fn && code == ';') || code == '[')

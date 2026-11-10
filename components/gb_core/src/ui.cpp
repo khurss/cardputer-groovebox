@@ -125,7 +125,7 @@ void AppUi::onKey(char code, bool pressed) {
             return;
         }
     }
-    if (screen_ == 6) { arrangement_.onKey(4,code,fn_ || arrow,shift_); return; }
+    if (screen_ == 6) { arrangement_.onKey(6,code,fn_,shift_); return; }
     if (screen_ == 7) {
         if (code == ',' || code == '/' || code == key::Enter) visual_.adjust(0,code==','?-1:1);
         else if (code == ';' || code == '.') visual_.adjust(2,code==';'?1:-1);
@@ -255,7 +255,7 @@ void AppUi::draw(Canvas& c, uint32_t tick, bool playing, bool storage) const {
         longest = std::max(longest, patternTicks(p.length, p.grid));
     }
     const uint32_t local = tick % (longest ? longest : kTicksPerBar);
-    if (screen_ == 6) visual_.drawMixer(c, project_, arrangement_.mixerStrip(), playing);
+    if (screen_ == 6) visual_.drawEqualizer(c, project_, arrangement_.eqBand(), playing);
     else if (screen_ == 7) visual_.draw(c, playing);
     else if (screen_ == 0)
         drums_.draw(c, local, playing, storage);
@@ -289,7 +289,7 @@ void AppUi::draw(Canvas& c, uint32_t tick, bool playing, bool storage) const {
     }
 }
 void AppUi::drawFnMenu(Canvas& c) const {
-    constexpr const char* names[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER", "MIX FFT", "VISUALS"};
+    constexpr const char* names[] = {"DRUMS", "SYNTH", "SCENES", "SONG", "MIXER", "SAMPLER", "EQ FFT", "VISUALS"};
     c.fillRect(0, 0, 240, 135, color::StepOutside);
     c.fillRect(0, 0, 240, 14, color::LaneSelected);
     char line[64];
@@ -300,11 +300,13 @@ void AppUi::drawFnMenu(Canvas& c) const {
     // All actions above the bottom hint use the Fn key already being held.
     const auto row = [&](int index, const char* value) { c.text(3, 34 + index * 10, value, color::Text); };
     if (screen_ >= 6) {
-        row(0, "Fn+7 mixer FFT  Fn+8 visuals");
+        row(0, "Fn+7 equalizer  Fn+8 visuals");
         row(1, "Arrows work without Fn");
         row(2, "Visuals: L/R mode, U/D sensitivity");
         row(3, "P palette; Opt settings / RGB LED");
+        row(4, "EQ: L/R band, U/D gain, B bypass");
         row(5, "Space play/stop; +/- master");
+        row(6, "0 band flat; Shift 0 all; Fn Z undo");
         row(7, "FFT reads real output, 63Hz-16kHz");
         return;
     }

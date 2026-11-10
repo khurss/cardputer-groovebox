@@ -126,7 +126,7 @@ TEST(allVisualModesPalettesAndMixerFitTheDisplay) {
     for(int mode=0;mode<4;++mode) {
         for(int palette=0;palette<4;++palette) {
             v.process(extreme);CanvasCheck c;v.draw(c,true);CHECK_EQ(c.valid,true);
-            CanvasCheck m;v.drawMixer(m,p,6,true);CHECK_EQ(m.valid,true);
+            CanvasCheck m;v.drawEqualizer(m,p,6,true);CHECK_EQ(m.valid,true);
             v.adjust(1,1);
         }
         v.adjust(0,1);
@@ -147,13 +147,13 @@ TEST(defaultPerformanceDoesNotModifyExistingProjectOrStealMusicalArrowKeys) {
     for(auto c:s.commands)CHECK_EQ(c.type==CommandType::LiveNoteOn,false);
     s.key('s',true);auto sound=s.p.synths[0].wave;s.key(';');CHECK_EQ(s.p.synths[0].wave!=sound,true);
 }
-TEST(bareArrowsNavigateWorkspacesAndFftSharesMixer) {
+TEST(bareArrowsNavigateWorkspacesAndEqualizerEditsAudio) {
     UiSession s;s.key('.');CHECK_EQ(s.ui.drums().selectedLane(),1);s.key('/');CHECK_EQ(s.ui.drums().currentPattern(),1);
     s.key('3',true);s.key('.');s.key('/');CHECK_EQ(s.ui.arrangement().scene(),1);CHECK_EQ(s.ui.arrangement().column(),1);
     s.key('4',true);s.key(key::Enter,true);s.key('/');CHECK_EQ(s.ui.arrangement().editingRepeats(),true);
-    s.key('7',true);s.key('/');s.key('.');CHECK_EQ(s.p.mixer[0].volume,95);
-    s.key('m');CHECK_EQ(s.p.mixer[0].mute,true);
-    s.key('5',true);CHECK_EQ(s.ui.arrangement().mixerStrip(),1);
+    s.key('7',true);s.key('/');s.key('.');CHECK_EQ(s.p.equalizer.gain[1],-1);
+    s.key('b');CHECK_EQ(s.p.equalizer.enabled,false);
+    s.key('5',true);CHECK_EQ(s.ui.arrangement().mixerStrip(),0);CHECK_EQ(s.p.mixer[0].volume,100);
     s.key('6',true);SampleJob job;s.ui.sampler().takeJob(job);SampleResult result;result.job=job;result.ok=true;s.ui.sampler().receive(result);s.ui.sampler().setMode(true);s.key('.');CHECK_EQ(s.ui.sampler().pad(),1);
     s.key('8',true);s.key('/');CHECK_EQ(s.ui.visual().settings().mode,1);
     s.key('p');CHECK_EQ(s.ui.visual().settings().palette,1);

@@ -85,7 +85,7 @@ TEST(stageTwoFixtureMigratesAndSavesAsVersionFour) {
     p.recordQuantize[1] = false;
     auto size = serializeProject(p, buffer, sizeof(buffer));
     CHECK_EQ(size > 0 && size < sizeof(buffer), true);
-    CHECK_EQ(buffer[4], 5);
+    CHECK_EQ(buffer[4], 6);
     p = Project{};
     CHECK_EQ(deserializeProject(buffer, size, p), LoadResult::Ok);
     CHECK_EQ(p.synths[2].wave, Waveform::Square);

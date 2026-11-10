@@ -18,6 +18,9 @@ constexpr int kPatternsPerTrack = 16;
 constexpr int kMaxNotes = 64;
 constexpr int kScenes = 16;
 constexpr int kSongEntries = 64;
+constexpr int kEqBands = 7;
+constexpr uint16_t kEqFrequencies[kEqBands] = {63,160,400,1000,2500,6300,12000};
+constexpr const char* kEqLabels[kEqBands] = {"63","160","400","1k","2.5k","6.3k","12k"};
 constexpr int8_t kEmptyPattern = -1;
 constexpr uint16_t kMaxPatternTicks = kMaxSteps * kTicksPerQuarter;
 
@@ -126,6 +129,11 @@ struct SamplePattern {
     DrumPattern steps;
     uint8_t slot[kSamplePads] = {0, 1, 2, 3, 4, 5, 6, 7};
 };
+struct EqualizerSettings {
+    int8_t gain[kEqBands] = {}; // dB, -12..+12
+    bool enabled = true;
+    bool valid() const { for(auto g:gain)if(g < -12 || g > 12)return false;return true; }
+};
 
 struct Project {
     uint16_t bpm = 120;
@@ -148,6 +156,7 @@ struct Project {
     uint8_t keyboardScale[kInstrumentTracks] = {};
     SampleClip samples[kSampleSlots];
     SamplePattern samplePatterns[kPatternsPerTrack];
+    EqualizerSettings equalizer;
 };
 
 }  // namespace gb

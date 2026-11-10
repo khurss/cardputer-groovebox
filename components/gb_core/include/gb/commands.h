@@ -53,6 +53,7 @@ enum class CommandType : uint8_t {
     SetSampleData,   // a slot, transient memory-mapped PCM, never serialized
     SilenceSamples,
     SetKeyboard, // a track, b layout/root/scale, value
+    SetEqualizer, // equalizer payload; atomic edit of gains and bypass state
 
 
 };
@@ -71,6 +72,7 @@ struct Command {
         int8_t scenePatterns[kTracks];
         SampleClip sampleClip;
         SamplePattern samplePattern;
+        EqualizerSettings equalizer;
         struct { const int16_t* data; uint32_t frames; } sampleData;
     };
 };

@@ -36,7 +36,7 @@ public:
     unsigned band(unsigned n) const { return n < kSpectrumBands ? bands_[n] : 0; }
     uint32_t ledRgb() const;
     void draw(Canvas& c, bool playing) const;
-    void drawMixer(Canvas& c, const Project& p, uint8_t strip, bool playing) const;
+    void drawEqualizer(Canvas& c, const Project& p, uint8_t band, bool playing) const;
     static const char* modeName(unsigned n);
     static const char* paletteName(unsigned n);
     static const char* smoothingName(unsigned n);

@@ -13,7 +13,7 @@ import zlib
 SCREENS = (
     'performance', 'drums', 'piano-roll', 'sound-editor', 'mixer', 'song',
     'scenes', 'sampler-files', 'sampler-cut', 'sampler-pads', 'menu', 'projects',
-    'quick-start', 'mixer-fft', 'visual-spectrum', 'visual-wave',
+    'quick-start', 'equalizer-fft', 'visual-spectrum', 'visual-wave',
     'visual-waterfall', 'visual-orbit', 'visual-settings', 'song-follow-browse',
 )
 ROOT = Path(__file__).resolve().parent.parent

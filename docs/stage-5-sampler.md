@@ -109,7 +109,7 @@ The cache is checked against project/source metadata and checksums, then rebuilt
 from WAV files if needed. Its header is committed after the PCM, so an interrupted
 preparation is not treated as a finished library.
 
-Sampler data was introduced in GBP v4; current saves use v5 and load v1–v5.
+Sampler data was introduced in GBP v4; current saves use v6 and load v1–v6.
 Older v1/v2/v3 projects start with an empty sampler track. Autosave runs after three
 idle seconds while stopped; microphone recording and file operations defer it.
 The audio task performs no file I/O or memory allocation. A 16 KB microphone queue

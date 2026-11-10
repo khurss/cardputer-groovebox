@@ -13,7 +13,7 @@ to the piano roll.
 ## Three tabs
 
 - **SCREENS**: Drums, Synth, Scenes, Song, Mixer, Sampler, Projects, Quick start,
-  Key reference, Mixer FFT and Visuals.
+  Key reference, Equalizer FFT and Visuals.
 - **ACTIONS**: commands for the current workspace, such as play, record, copy,
   paste, undo and clear. The sampler also offers WAV browsing, selection bounds,
   slice saving and chopping.
@@ -48,10 +48,12 @@ All workspaces expose master volume, tempo, swing and RGB brightness, plus:
 | Scenes | Scene, track and assigned pattern |
 | Song | Row, scene to insert, entry scene and repeats |
 | Mixer | Channel, channel level, mute and solo |
+| Equalizer FFT | Frequency band, gain in dB and bypass |
 | Sampler | Pad, assigned slot, pattern, chop count, length and grid; slot selection shows the source WAV filename |
 
-FFT mixer and Visuals also expose [palette, sensitivity and smoothing](audio-visuals.md).
-Visuals adds mode and motion speed. Display preferences save separately from projects.
+Equalizer FFT and Visuals also expose [palette, sensitivity and smoothing](audio-visuals.md).
+Equalizer ACTIONS includes bypass, reset all bands and undo. Its audio settings
+save in the project. Visuals adds mode and motion speed. Display preferences save separately from projects.
 
 ## Actions and recording
 

@@ -163,7 +163,7 @@ def stress_project():
     return b'GBPJ' + struct.pack('<HII', 4, len(body), zlib.crc32(body)) + body
 
 
-def run_stress(seconds=60):
+def run_stress(seconds=60, equalizer=False):
     with isolated_project():
         device = open_device()
         try:
@@ -174,6 +174,14 @@ def run_stress(seconds=60):
             device, _ = reopen(device)
             wait_sampler(device, ready=1, busy=0)
             report = Report()
+            if equalizer:
+                device.key('7', 'f')
+                for band in range(7):
+                    for _ in range(4): device.key(';', 's')
+                    if band < 6: device.key('/')
+                device.send('E')
+                eq = parse_fields(device.wait_for('EQ '))
+                report.check('all seven EQ filters active at +12 dB', eq['enabled'] == 1 and all(eq[f'g{i}'] == 12 for i in range(7)))
             device.key('space')
             time.sleep(1.2)
             device.send('C reset')
@@ -182,6 +190,7 @@ def run_stress(seconds=60):
             device.key('6', 'f')
             device.key('alt')
             wait_sampler(device, recording=1)
+            if equalizer: device.key('7', 'f')
             print('INFO dense synth + eight drums + four sample voices + SD microphone:', seconds, 'seconds')
             deadline = time.monotonic() + seconds
             while time.monotonic() < deadline:
@@ -195,6 +204,7 @@ def run_stress(seconds=60):
             report.check('long live recording has no dropped blocks', state['dropped'] == 0 and state['frames'] >= seconds * 32000)
             for counter in ('tx_overflows', 'rx_overflows', 'failures', 'event_overflows'):
                 report.check('combined stress no new ' + counter, after[counter] == before[counter])
+            if equalizer: device.key('6', 'f')
             device.key('alt')
             wait_sampler(device, recording=0, busy=0)
             stop_for_test(device)
@@ -212,4 +222,4 @@ def main():
 
 if __name__ == '__main__':
     import sys
-    raise SystemExit(run_stress() if '--stress' in sys.argv else main())
+    raise SystemExit(run_stress(equalizer='--eq' in sys.argv) if '--stress' in sys.argv else main())

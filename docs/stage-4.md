@@ -1,7 +1,7 @@
 # Scenes, song arrangement, mixer and arpeggiator
 
 Build reusable patterns, combine them into scenes, then arrange scenes into a song.
-`Fn+1..6` opens Drums, Synth, Scenes, Song, Mixer or Sampler. `Fn+7` opens Mixer FFT and
+`Fn+1..6` opens Drums, Synth, Scenes, Song, Mixer or Sampler. `Fn+7` opens Equalizer FFT and
 `Fn+8` opens Visuals; `Tab` cycles all eight.
 `Space` starts/stops playback. In Song, playback starts from the selected entry.
 [Menu guide](menu.md) · [All guides](README.md)
@@ -107,11 +107,11 @@ and live playing share five voices, or four while samples sound.
 track mute and `S` toggles solo; mute takes priority. MAIN has no mute/solo.
 `Fn+Z` undoes the last edit. MAIN controls the full output after the limiter.
 The faders show **configured levels**, not VU measurements.
-For a real master spectrum above the mixer controls, open [Mixer FFT](audio-visuals.md)
+To shape frequency bands while watching the output spectrum, open [Equalizer FFT](audio-visuals.md)
 with `Fn+7`.
 
 Scenes, song entries, levels, mute/solo and arpeggiator settings save to SD.
-The current firmware reads GBP v1–v5 and writes v5. Tests use a separate file and
+The current firmware reads GBP v1–v6 and writes v6. Tests use a separate file and
 do not replace a regular project's volume with the test level.
 
 ## Automated checks

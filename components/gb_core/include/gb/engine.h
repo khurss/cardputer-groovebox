@@ -8,6 +8,7 @@
 #include "gb/recorder.h"
 #include "gb/synth.h"
 #include "gb/sample_player.h"
+#include "gb/equalizer.h"
 namespace gb {
 class Engine {
 public:
@@ -42,6 +43,7 @@ private:
     Recorder recorder_;
     Arpeggiator arp_;
     SamplePlayer samples_;
+    Equalizer equalizer_;
     float sampleGain_ = 1;
     std::atomic<uint32_t> sampleEpoch_{0}, sampleVoices_{0};
     std::atomic<uint8_t> voiceBudget_{kSynthVoices};

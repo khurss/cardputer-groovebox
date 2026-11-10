@@ -14,7 +14,7 @@ Fn remains a modifier and never opens a popup. [All guides](README.md)
 | Esc | Back/cancel; open the menu from a main workspace; Performance/Sound → Piano roll |
 | Tab | Next workspace; next tab inside the menu |
 | Fn+1..6 | Drums / Synth / Scenes / Song / Mixer / Sampler |
-| Fn+7 / Fn+8 | Mixer FFT / Visuals |
+| Fn+7 / Fn+8 | Equalizer FFT / Visuals |
 | Space | Start/stop transport, including inside the menu |
 | + / − | MAIN ±5%; hold Ctrl for ±1% |
 | Alt | In Drums/Synth, arm or finish synth recording; in Sampler, start/stop microphone recording |
@@ -134,11 +134,15 @@ Use **ACTIONS → Delete sample slot** if you want a confirmation first.
 Every workspace menu includes **Key reference** for the current screen.
 [Complete sampler guide](stage-5-sampler.md)
 
-## FFT mixer and audio visualizations
+## Equalizer FFT and audio visualizations
 
-`Fn+7` opens the FFT mixer: ←/→ selects a strip, ↑/↓ changes level, M/S toggles
-mute/solo. `Fn+8` opens Visuals: ←/→ or Enter changes mode, ↑/↓ changes sensitivity,
-and P cycles palettes. **Opt → SETTINGS** configures smoothing, motion and RGB
-brightness. Wave uses automatic scaling; sensitivity affects the FFT views and LED.
-These arrow controls also accept Fn.
+`Fn+7` opens the master equalizer: ←/→ selects a frequency band, ↑/↓ changes
+its gain by 1 dB, or 3 dB with Shift. **B** toggles bypass; **0** resets the selected
+band; **Shift+0** resets all seven bands; **Fn+Z** undoes the last EQ/mixer edit.
+Plain +/− still adjusts MAIN. The channel mixer remains on `Fn+5`.
+
+`Fn+8` opens Visuals: ←/→ or Enter changes mode, ↑/↓ changes sensitivity, and P
+cycles palettes. **Opt → SETTINGS** configures smoothing, motion and RGB brightness.
+Wave uses automatic scaling; sensitivity affects the FFT views and LED. These
+arrow controls also accept Fn.
 [Four visualization modes and RGB feedback](audio-visuals.md)

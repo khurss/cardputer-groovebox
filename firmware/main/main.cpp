@@ -223,6 +223,10 @@ void runConsoleLine(gb::AppUi& ui, char* line) {
             printf("OK\n");
         } else
             printf("ERR key\n");
+    } else if (strcmp(line,"E")==0) {
+        printf("EQ enabled=%u band=%u",uiProject.equalizer.enabled,ui.arrangement().eqBand());
+        for(int i=0;i<gb::kEqBands;++i)printf(" g%d=%d",i,uiProject.equalizer.gain[i]);
+        printf("\n");
     } else if (strcmp(line, "B") == 0) {
         const auto& v=ui.visual(); const auto& settings=v.settings();
         printf("VIS mode=%u palette=%u gain=%u smoothing=%u motion=%u led=%u frames=%u peak=%u bin=%u fft_max_us=%u rgb=%u rgb_ready=%u rgb_failures=%u performance=%u\n",

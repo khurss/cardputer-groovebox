@@ -37,6 +37,7 @@ bool isValidInstrument(const InstrumentPattern& pattern) {
 }
 
 bool isValidProject(const Project& project) {
+    if(!project.equalizer.valid())return false;
     for (int t = 0; t < kInstrumentTracks; ++t)
         if (project.keyboardLayout[t] > 1 || project.keyboardRoot[t] > 11 || project.keyboardScale[t] > 3) return false;
     for (const auto& clip : project.samples) if (!isValidSampleClip(clip)) return false;

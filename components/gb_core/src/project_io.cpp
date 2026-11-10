@@ -12,7 +12,7 @@ namespace gb {
 namespace {
 
 constexpr char kMagic[4] = {'G', 'B', 'P', 'J'};
-constexpr uint16_t kVersion = 5;
+constexpr uint16_t kVersion = 6;
 constexpr size_t kHeaderSize = 14;  // Magic, version, payload size, checksum.
 constexpr size_t kMaxPathLength = 96;
 
@@ -190,6 +190,10 @@ void codeProject(Codec& codec, Project& project, uint16_t version) {
         for (auto& v : project.keyboardLayout) codec.u8(v);
         for (auto& v : project.keyboardRoot) codec.u8(v);
         for (auto& v : project.keyboardScale) codec.u8(v);
+    }
+    if(version>=6) {
+        for(auto& gain:project.equalizer.gain)codec.i8(gain);
+        codec.boolean(project.equalizer.enabled);
     }
 }
 

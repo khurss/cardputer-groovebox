@@ -179,20 +179,21 @@ void AudioVisual::draw(Canvas& c,bool playing) const {
     }
     style::footer(c,settings_.mode==1 ? "L/R view  AUTO scale  P color  Opt" : "L/R view U/D gain  P color  Opt setup");
 }
-void AudioVisual::drawMixer(Canvas& c,const Project& p,uint8_t strip,bool playing) const {
-    c.fillRect(0,0,240,135,color::Background); style::header(c,"MIXER / FFT",playing?"PLAY":"LIVE");
-    spectrum(c,20,40);
-    c.text(5,63,"63Hz",color::Muted); c.text(102,63,"1k",color::Muted); c.text(200,63,"16kHz",color::Muted);
-    constexpr const char* names[]={"MAIN","DRUM","T1","T2","T3","T4","SMP"};
-    for (unsigned i=0;i<=kTracks;++i) {
-        int x=i*34,level=i?p.mixer[i-1].volume:p.masterVolume;
-        c.fillRect(x+1,76,32,44,i==strip?color::LaneSelected:color::Panel);
-        c.text(x+3,79,names[i],i==strip?color::Text:ink(i*255/6));
-        c.fillRect(x+4,92,24,3,color::StepOff);
-        if (level) c.fillRect(x+4,92,std::max(1,level*24/100),3,ink(i*255/6));
-        char n[8]; std::snprintf(n,sizeof(n),"%u",unsigned(level)); c.text(x+4,99,n,color::Text);
-        if (i) { c.text(x+4,110,"M",p.mixer[i-1].mute?color::Warning:color::StepOff); c.text(x+21,110,"S",p.mixer[i-1].solo?color::StepAccent:color::StepOff); }
+void AudioVisual::drawEqualizer(Canvas& c,const Project& p,uint8_t band,bool playing) const {
+    c.fillRect(0,0,240,135,color::Background);
+    style::header(c,"EQ / OUTPUT FFT",!p.equalizer.enabled?"BYPASS":playing?"PLAY":"LIVE");
+    spectrum(c,20,31);
+    c.text(5,54,"63Hz",color::Muted); c.text(102,54,"1k",color::Muted); c.text(200,54,"16kHz",color::Muted);
+    for (unsigned i=0;i<kEqBands;++i) {
+        const int x=i*34,gain=p.equalizer.gain[i];
+        const auto bandColor=p.equalizer.enabled?ink(i*255/6):color::Muted;
+        c.fillRect(x+1,67,32,53,i==band?color::LaneSelected:color::Panel);
+        c.text(x+3,70,kEqLabels[i],i==band?color::Text:bandColor);
+        c.fillRect(x+16,83,2,25,color::StepOff);
+        c.fillRect(x+5,95,24,1,color::Muted);
+        c.fillRect(x+11,94-gain,12,3,bandColor);
+        char n[8]; std::snprintf(n,sizeof(n),"%+ddB",gain); c.text(x+2,111,n,i==band?color::Text:bandColor);
     }
-    style::footer(c,"Arrows mix  M mute S solo  Opt setup");
+    style::footer(c,"Arrows EQ  B bypass  0 flat  Opt");
 }
 }

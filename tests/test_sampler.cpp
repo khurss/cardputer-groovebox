@@ -113,7 +113,7 @@ TEST(samplerStorageModelMigratesLegacyAndKeepsClipBoundariesAndSteps) {
     CHECK_EQ(p.masterVolume,37);CHECK_EQ(p.scenes[0].pattern[kSamplerTrack],-1);CHECK_EQ(p.mixer[kSamplerTrack].volume,100);
     std::strcpy(p.samples[13].source,"take 01.wav");p.samples[13].start=123456;p.samples[13].end=198765;
     p.samplePatterns[9].slot[5]=13;p.samplePatterns[9].steps.velocity[5][8]=127;p.scenes[3].pattern[kSamplerTrack]=9;
-    auto size=serializeProject(p,buffer,sizeof(buffer));CHECK_EQ(size>0,true);CHECK_EQ(buffer[4],5);
+    auto size=serializeProject(p,buffer,sizeof(buffer));CHECK_EQ(size>0,true);CHECK_EQ(buffer[4],6);
     p=Project{};CHECK_EQ(deserializeProject(buffer,size,p),LoadResult::Ok);CHECK_EQ(p.samples[13].start,123456u);
     CHECK_EQ(p.samples[13].end,198765u);CHECK_EQ(p.samplePatterns[9].slot[5],13);CHECK_EQ(p.samplePatterns[9].steps.velocity[5][8],127);
     CHECK_EQ(p.scenes[3].pattern[kSamplerTrack],9);

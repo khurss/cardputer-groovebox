@@ -8,6 +8,7 @@ void initProject(Project& project) { project.scenes[0].pattern[0] = 0; }
 
 bool isValidCommand(const Command& command) {
     switch (command.type) {
+        case CommandType::SetEqualizer: return command.equalizer.valid();
         case CommandType::SetSampleClip:
             return command.a < kSampleSlots && isValidSampleClip(command.sampleClip);
         case CommandType::SetSamplePattern:
@@ -122,6 +123,7 @@ void applyEdit(Project& project, const Command& command) {
     if (!isValidCommand(command))
         return;
     switch (command.type) {
+        case CommandType::SetEqualizer: project.equalizer=command.equalizer;break;
         case CommandType::SetSampleClip:
             project.samples[command.a] = command.sampleClip;
             break;

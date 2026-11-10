@@ -82,7 +82,7 @@ TEST(newFormatKeepsV2SynthAndAddsDefaultMixerAndArp) {
     const auto n = serializeProject(p, data, sizeof(data));
     p = Project{};
     CHECK_EQ(deserializeProject(data, n, p), LoadResult::Ok);
-    CHECK_EQ(data[4], 5);
+    CHECK_EQ(data[4], 6);
     CHECK_EQ(p.masterVolume, 27);
     CHECK_EQ(p.mixer[2].volume, 42);
     CHECK_EQ(p.mixer[2].solo, true);
