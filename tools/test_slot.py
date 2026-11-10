@@ -83,7 +83,47 @@ class TableTests(unittest.TestCase):
         self.assertEqual(image[0x1000:], b"\xff" * 0x1000)
 
 
+class CheckTableTests(unittest.TestCase):
+    def good(self):
+        return slot.build(DEVICE)[:0xC00]
+
+    def test_valid_table_passes(self):
+        slot.check_table(self.good())
+
+    def test_valid_table_with_probe_and_samples_passes(self):
+        slot.check_table(slot.build(slot.add_samples(slot.add_probe(DEVICE)))[:0xC00])
+
+    def test_blank_table_is_rejected(self):
+        with self.assertRaises(ValueError):
+            slot.check_table(b"\xff" * 0xC00)
+
+    def test_corrupted_third_magic_is_rejected(self):
+        data = bytearray(self.good())
+        data[64:66] = b"\x00\x00"
+        with self.assertRaises(ValueError):
+            slot.check_table(bytes(data))
+
+    def test_wrong_md5_is_rejected(self):
+        data = bytearray(self.good())
+        data[len(DEVICE) * 32 + 16] ^= 0xFF
+        with self.assertRaises(ValueError):
+            slot.check_table(bytes(data))
+
+    def test_missing_glide_is_rejected(self):
+        without = [e for e in DEVICE if slot.label(e) != "glide"]
+        with self.assertRaises(ValueError):
+            slot.check_table(slot.build(without)[:0xC00])
+
+
 class ArgumentTests(unittest.TestCase):
+    def test_install_with_non_esp_image_is_rejected(self):
+        for command in ("install", "install-with-samples"):
+            with tempfile.NamedTemporaryFile() as image:
+                image.write(b"\x00junk")
+                image.flush()
+                with self.assertRaises(SystemExit):
+                    slot.validate_args(["slot.py", command, image.name])
+
     def test_no_command_is_rejected(self):
         with self.assertRaises(SystemExit):
             slot.validate_args(["slot.py"])
@@ -114,6 +154,8 @@ class ArgumentTests(unittest.TestCase):
 
     def test_valid_forms_are_accepted(self):
         with tempfile.NamedTemporaryFile() as image:
+            image.write(b"\xe9rest")
+            image.flush()
             slot.validate_args(["slot.py", "install", image.name])
             slot.validate_args(["slot.py", "install-with-samples", image.name])
         slot.validate_args(["slot.py", "select", "glide"])

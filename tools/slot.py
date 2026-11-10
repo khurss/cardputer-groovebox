@@ -30,6 +30,20 @@ def parse(data):
     return entries
 
 
+def check_table(data):
+    entries = parse(data)
+    end = len(entries) * 32
+    body = b"".join(entries)
+    expected = b"\xeb\xeb" + b"\xff" * 14 + hashlib.md5(body).digest()
+    if data[end : end + 32] != expected:
+        raise ValueError("partition table on the device is blank, corrupt or has a wrong MD5")
+    wanted = (("app0", 0x10000), ("glide", 0x170000), ("otadata", OTADATA_OFFSET))
+    found = {(label(e), struct.unpack(FORMAT, e)[3]) for e in entries}
+    for name, offset in wanted:
+        if (name, offset) not in found:
+            raise ValueError(f"partition table has no {name} at {offset:#x}")
+
+
 def build(entries):
     body = b"".join(entries)
     return (body + b"\xeb\xeb" + b"\xff" * 14 + hashlib.md5(body).digest()).ljust(0x1000, b"\xff")
@@ -93,6 +107,9 @@ def validate_args(argv):
             sys.exit(usage)
         if not Path(argv[2]).is_file():
             sys.exit(f"probe image not found: {argv[2]}")
+        with open(argv[2], "rb") as image:
+            if image.read(1) != b"\xe9":
+                sys.exit(f"not an ESP app image (first byte is not 0xE9): {argv[2]}")
     if command == "select" and len(argv) < 3:
         sys.exit(usage)
     if command not in ("install", "install-with-samples", "select", "remove-probe"):
@@ -120,14 +137,19 @@ def write(work, offset, data):
 def read_entries(work):
     path = Path(work) / "table.bin"
     esptool("read_flash", hex(TABLE_OFFSET), "0xC00", "/work/" + str(path.relative_to(ROOT)))
-    return parse(path.read_bytes())
+    data = path.read_bytes()
+    check_table(data)
+    return parse(data)
 
 
 def main(argv):
     validate_args(argv)
     (ROOT / ".tmp").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(dir=ROOT / ".tmp") as work:
-        entries = read_entries(work)
+        try:
+            entries = read_entries(work)
+        except ValueError as error:
+            sys.exit(f"refusing to write: {error}")
         if argv[1] == "install":
             app = Path(argv[2]).read_bytes()
             if len(app) > PROBE_SIZE:
