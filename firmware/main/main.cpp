@@ -39,6 +39,8 @@ std::atomic<uint32_t> loadPermille{0};
 std::atomic<uint32_t> exchangeFailures{0};
 gb::Engine* engine = nullptr;
 bool storageAvailable = false;
+bool saveAllowed = false;
+bool loadFailed = false;
 
 bool sendCommand(void*, const gb::Command& command) {
     while (!commands.push(command)) vTaskDelay(pdMS_TO_TICKS(1));
@@ -119,6 +121,8 @@ void runConsoleLine(gb::DrumUi& ui, char* line) {
     } else if (line[0] == 'L') {
         int ms = 0;
         if (sscanf(line, "L %d", &ms) == 1) {
+            if (ms < 0) ms = 0;
+            if (ms > 10000) ms = 10000;
             vTaskDelay(pdMS_TO_TICKS(50));
             micPeak.store(0, std::memory_order_relaxed);
             vTaskDelay(pdMS_TO_TICKS(ms));
@@ -160,6 +164,8 @@ void loadProject() {
         mkdir(kProjects, 0777);
         const gb::LoadResult result = gb::loadProjectFile(kProjectPath, uiProject, fileBuffer, sizeof(fileBuffer));
         printf("LOAD result=%d\n", static_cast<int>(result));
+        loadFailed = result != gb::LoadResult::Ok && result != gb::LoadResult::NotFound;
+        saveAllowed = storageAvailable && !loadFailed;
     }
     audioProject = uiProject;
 }
@@ -178,6 +184,7 @@ void uiTask(void*) {
 
     SpriteCanvas canvas(sprite);
     static gb::DrumUi ui(uiProject, sendCommand, nullptr);
+    if (loadFailed) ui.setWarning("LOAD ERR");
     if (!hw::initKeyboard()) printf("ERROR keyboard\n");
     printf("READY\n");
 
@@ -187,9 +194,13 @@ void uiTask(void*) {
         while (hw::pollKey(event)) ui.onKey(event.code, event.pressed);
         pollConsole(ui);
 
-        if (ui.takeSaveRequest() && storageAvailable) {
-            const bool saved = gb::saveProjectFile(kProjectPath, uiProject, fileBuffer, sizeof(fileBuffer));
-            printf("SAVE ok=%d\n", saved ? 1 : 0);
+        if (ui.takeSaveRequest()) {
+            if (saveAllowed) {
+                const bool saved = gb::saveProjectFile(kProjectPath, uiProject, fileBuffer, sizeof(fileBuffer));
+                printf("SAVE ok=%d\n", saved ? 1 : 0);
+            } else if (storageAvailable) {
+                printf("SAVE blocked\n");
+            }
         }
 
         const int64_t now = esp_timer_get_time() / 1000;

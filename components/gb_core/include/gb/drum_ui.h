@@ -59,6 +59,11 @@ public:
     int selectedLane() const { return lane_; }
     int currentPattern() const { return pattern_; }
 
+    void setWarning(const char* text) {
+        warning_ = text;
+        dirty_ = true;
+    }
+
 private:
     void onPress(char code);
     void onFnPress(char code);
@@ -88,6 +93,7 @@ private:
     bool running_ = false;
     bool saveRequested_ = false;
     bool dirty_ = true;
+    const char* warning_ = nullptr;
     bool undoAvailable_ = false;
     bool clipboardFull_ = false;
     int undoPattern_ = 0;

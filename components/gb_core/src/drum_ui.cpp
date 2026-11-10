@@ -243,7 +243,8 @@ void DrumUi::draw(Canvas& canvas, uint32_t sceneTick, bool playing, bool storage
     snprintf(line, sizeof(line), "P%02d %3uBPM %s x%u SW%u %s", pattern_ + 1, project_.bpm, gridName(pattern.grid),
              pattern.length, project_.swing, playing ? "PLAY" : "STOP");
     canvas.text(0, 2, line, color::Text);
-    if (!storageAvailable) canvas.text(198, 2, "NO SD", color::Warning);
+    const char* warning = warning_ ? warning_ : (storageAvailable ? nullptr : "NO SD");
+    if (warning) canvas.text(192, 2, warning, color::Warning);
 
     const uint32_t stepTicks = gridTicks(pattern.grid);
     const int playStep = playing ? static_cast<int>((sceneTick % patternTicks(pattern.length, pattern.grid)) / stepTicks) : -1;

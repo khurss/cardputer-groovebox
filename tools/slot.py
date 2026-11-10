@@ -118,7 +118,7 @@ def otadata_image(index):
 
 
 def validate_args(argv):
-    usage = "usage: slot.py install <bin> | install-with-samples <bin> | select <label> | remove-probe"
+    usage = "usage: slot.py install <bin> | install-with-samples <bin> | install-app <bin> | select <label> | remove-probe | remove-app"
     if len(argv) < 2:
         sys.exit(usage)
     command = argv[1]
@@ -126,7 +126,7 @@ def validate_args(argv):
         if len(argv) < 3:
             sys.exit(usage)
         if not Path(argv[2]).is_file():
-            sys.exit(f"probe image not found: {argv[2]}")
+            sys.exit(f"image not found: {argv[2]}")
         with open(argv[2], "rb") as image:
             if image.read(1) != b"\xe9":
                 sys.exit(f"not an ESP app image (first byte is not 0xE9): {argv[2]}")
@@ -173,7 +173,7 @@ def main(argv):
         if argv[1] == "install":
             app = Path(argv[2]).read_bytes()
             if len(app) > PROBE_SIZE:
-                sys.exit("probe image does not fit its slot")
+                sys.exit("image does not fit its slot")
             table = add_probe(entries)
             write(work, PROBE_OFFSET, app)
             write(work, TABLE_OFFSET, build(table))
@@ -181,7 +181,7 @@ def main(argv):
         elif argv[1] == "install-with-samples":
             app = Path(argv[2]).read_bytes()
             if len(app) > PROBE_SIZE:
-                sys.exit("probe image does not fit its slot")
+                sys.exit("image does not fit its slot")
             table = add_samples(add_probe(entries))
             write(work, PROBE_OFFSET, app)
             write(work, SAMPLES_OFFSET, b"GBSM".ljust(0x1000, b"\xff"))

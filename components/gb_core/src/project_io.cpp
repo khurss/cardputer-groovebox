@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <new>
 
 #include "gb/validate.h"
 
@@ -176,7 +177,7 @@ LoadResult deserializeProject(const uint8_t* data, size_t size, Project& out) {
     if (payload != size - kHeaderSize) return LoadResult::BadSize;
     if (getU32(data + 10) != checksum(data + kHeaderSize, payload)) return LoadResult::BadChecksum;
     Project& decoded = scratchProject();
-    decoded = Project{};
+    new (&decoded) Project{};
     Codec codec(const_cast<uint8_t*>(data + kHeaderSize), payload, false);
     codeProject(codec, decoded);
     if (!codec.ok() || codec.used() != payload) return LoadResult::BadSize;

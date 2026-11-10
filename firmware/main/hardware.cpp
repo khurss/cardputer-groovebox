@@ -152,6 +152,7 @@ bool pollKey(KeyEvent& event) {
     if (!readRegister(keyboard, kRegEventA, raw) || raw == 0) return false;
     writeRegister(keyboard, kRegIntStat, 0x01);
     const int code = (raw & 0x7F) - 1;
+    if (code < 0) return false;
     const int chipRow = code / 10;
     const int chipColumn = code % 10;
     const int column = chipRow * 2 + (chipColumn > 3 ? 1 : 0);

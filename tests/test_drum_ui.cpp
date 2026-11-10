@@ -296,3 +296,12 @@ TEST(startsOnThePatternSceneZeroPlays) {
     DrumUi ui(project, sink, &sent);
     CHECK_EQ(ui.currentPattern(), 5);
 }
+
+TEST(warningReplacesNoCardMessage) {
+    Fixture f;
+    f.ui.setWarning("LOAD ERR");
+    FakeCanvas canvas;
+    f.ui.draw(canvas, 0, false, false);
+    CHECK_EQ(canvas.texts.find("LOAD ERR") != std::string::npos, true);
+    CHECK_EQ(canvas.texts.find("NO SD") == std::string::npos, true);
+}
