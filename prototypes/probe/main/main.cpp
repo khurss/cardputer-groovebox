@@ -29,6 +29,8 @@ constexpr uint32_t kFrames = 256;
 constexpr uint32_t kBlockBytes = kFrames * 4;
 constexpr uint32_t kRecordSeconds = 15;
 constexpr uint32_t kPlaybackSeconds = 5;
+constexpr uint32_t kSettleBlocks = 32;
+constexpr int kPlaybackGain = 8;
 constexpr char kDir[] = "/sd/groovebox_probe";
 constexpr char kFile[] = "/sd/groovebox_probe/mic.raw";
 
@@ -37,7 +39,7 @@ i2s_chan_handle_t tx, rx;
 volatile uint32_t txOverflows, rxOverflows;
 int16_t outBlock[kFrames * 2];
 int16_t inBlock[kFrames * 2];
-char summary[1600];
+char summary[2400];
 size_t summaryLength;
 
 void report(const char* format, ...) {
@@ -130,8 +132,8 @@ bool duplexBlock() {
     return i2s_channel_read(rx, inBlock, kBlockBytes, &done, pdMS_TO_TICKS(200)) == ESP_OK;
 }
 
-void fillTone(float& phase, float amplitude) {
-    const float step = 2.0f * static_cast<float>(M_PI) * 440.0f / kRate;
+void fillTone(float& phase, float amplitude, float frequency = 440.0f) {
+    const float step = 2.0f * static_cast<float>(M_PI) * frequency / kRate;
     for (uint32_t i = 0; i < kFrames; ++i) {
         const auto sample = static_cast<int16_t>(sinf(phase) * amplitude * 32767.0f);
         outBlock[i * 2] = outBlock[i * 2 + 1] = sample;
@@ -256,16 +258,45 @@ void recordWithPlayback() {
     uint32_t dropped = 0, failures = 0;
     const uint32_t blocks = kRecordSeconds * kRate / kFrames;
     static int16_t mono[kFrames];
+    static int secondPeaks[kRecordSeconds];
+    int64_t maxBlockUs = 0;
+    uint32_t seenOverflows = 0, overflowCount = 0;
+    uint32_t overflowBlocks[8] = {};
     for (uint32_t block = 0; block < blocks; ++block) {
         fillTone(phase, 0.12f);
+        const int64_t blockStart = esp_timer_get_time();
         if (!duplexBlock()) ++failures;
+        const int64_t blockTime = esp_timer_get_time() - blockStart;
+        if (block == kSettleBlocks) {  // Queues overflow while nothing services them during SD setup.
+            txOverflows = 0;
+            rxOverflows = 0;
+            seenOverflows = 0;
+        }
+        if (block > kSettleBlocks) {
+            if (blockTime > maxBlockUs) maxBlockUs = blockTime;
+            if (txOverflows != seenOverflows) {
+                seenOverflows = txOverflows;
+                if (overflowCount < 8) overflowBlocks[overflowCount++] = block;
+            }
+        }
         for (uint32_t i = 0; i < kFrames; ++i) {
             mono[i] = inBlock[i * 2];
             energyLeft += static_cast<double>(inBlock[i * 2]) * inBlock[i * 2];
             energyRight += static_cast<double>(inBlock[i * 2 + 1]) * inBlock[i * 2 + 1];
+            const int level = mono[i] < 0 ? -mono[i] : mono[i];
+            int& peak = secondPeaks[block * kFrames / kRate];
+            if (level > peak) peak = level;
         }
         if (xStreamBufferSend(writer.stream, mono, sizeof(mono), 0) != sizeof(mono)) ++dropped;
     }
+    for (uint32_t second = 0; second < kRecordSeconds; ++second) {
+        report("MIC sec=%u peak=%d\n", static_cast<unsigned>(second), secondPeaks[second]);
+    }
+    report("SDLOOP max_block_us=%lld overflow_blocks:", static_cast<long long>(maxBlockUs));
+    for (uint32_t i = 0; i < overflowCount; ++i) report(" %u", static_cast<unsigned>(overflowBlocks[i]));
+    report("\n");
+    const uint32_t txDuringRecord = txOverflows;
+    const uint32_t rxDuringRecord = rxOverflows;
     writer.finish = true;
     while (!writer.done) vTaskDelay(pdMS_TO_TICKS(10));
     fclose(file);
@@ -277,8 +308,8 @@ void recordWithPlayback() {
     report("DUPLEX expected=%u written=%u filesize=%ld dropped_blocks=%u io_failures=%u\n",
            static_cast<unsigned>(blocks * sizeof(mono)), static_cast<unsigned>(writer.written),
            static_cast<long>(info.st_size), static_cast<unsigned>(dropped), static_cast<unsigned>(failures));
-    report("DUPLEX tx_overflows=%u rx_overflows=%u max_sd_write_ms=%u\n", static_cast<unsigned>(txOverflows),
-           static_cast<unsigned>(rxOverflows), static_cast<unsigned>(writer.maxWriteMs));
+    report("DUPLEX tx_overflows=%u rx_overflows=%u max_sd_write_ms=%u\n", static_cast<unsigned>(txDuringRecord),
+           static_cast<unsigned>(rxDuringRecord), static_cast<unsigned>(writer.maxWriteMs));
     report("DUPLEX mic_rms left=%.0f right=%.0f\n", sqrt(energyLeft / samples), sqrt(energyRight / samples));
 
     printf("PROBE: playing the last %u seconds back\n", static_cast<unsigned>(kPlaybackSeconds));
@@ -287,12 +318,74 @@ void recordWithPlayback() {
     const long tail = static_cast<long>(kPlaybackSeconds * kRate * sizeof(int16_t));
     fseek(file, info.st_size > tail ? info.st_size - tail : 0, SEEK_SET);
     while (fread(mono, sizeof(int16_t), kFrames, file) == kFrames) {
-        for (uint32_t i = 0; i < kFrames; ++i) outBlock[i * 2] = outBlock[i * 2 + 1] = mono[i];
+        for (uint32_t i = 0; i < kFrames; ++i) {
+            int boosted = mono[i] * kPlaybackGain;
+            if (boosted > 32767) boosted = 32767;
+            if (boosted < -32768) boosted = -32768;
+            outBlock[i * 2] = outBlock[i * 2 + 1] = static_cast<int16_t>(boosted);
+        }
         duplexBlock();
     }
     fclose(file);
     memset(outBlock, 0, sizeof(outBlock));
     duplexBlock();
+}
+
+float toneLevel(const int16_t* stereo, float frequency) {
+    const float coefficient = 2.0f * cosf(2.0f * static_cast<float>(M_PI) * frequency / kRate);
+    float previous = 0.0f, beforePrevious = 0.0f;
+    for (uint32_t i = 0; i < kFrames; ++i) {
+        const float current = stereo[i * 2] + coefficient * previous - beforePrevious;
+        beforePrevious = previous;
+        previous = current;
+    }
+    const float power = previous * previous + beforePrevious * beforePrevious - coefficient * previous * beforePrevious;
+    return sqrtf(power > 0.0f ? power : 0.0f) / kFrames;
+}
+
+// Plays each test tone through the speaker and measures it with the microphone.
+void acousticLoopback() {
+    constexpr uint32_t kBlocksPerPhase = kRate / kFrames;
+    constexpr float kPassDb = 12.0f;
+    for (float frequency : {1000.0f, 2000.0f, 3000.0f}) {
+        float phase = 0.0f, tone = 0.0f, silence = 0.0f;
+        const uint32_t measured = kBlocksPerPhase - kSettleBlocks;
+        for (uint32_t block = 0; block < kBlocksPerPhase; ++block) {
+            fillTone(phase, 0.4f, frequency);
+            duplexBlock();
+            if (block >= kSettleBlocks) tone += toneLevel(inBlock, frequency);
+        }
+        memset(outBlock, 0, sizeof(outBlock));
+        for (uint32_t block = 0; block < kBlocksPerPhase; ++block) {
+            duplexBlock();
+            if (block >= kSettleBlocks) silence += toneLevel(inBlock, frequency);
+        }
+        tone /= measured;
+        silence /= measured;
+        const float db = 20.0f * log10f(tone / (silence > 0.001f ? silence : 0.001f));
+        report("LOOPBACK freq=%.0f tone=%.1f silence=%.1f snr_db=%.1f pass=%d\n", frequency, tone, silence, db,
+               db >= kPassDb ? 1 : 0);
+    }
+}
+
+// Same audio loop with no SD activity, to tell driver behaviour from SD interference.
+void baselineDuplex() {
+    float phase = 0.0f;
+    int64_t maxBlockUs = 0;
+    const uint32_t blocks = kRecordSeconds * kRate / kFrames;
+    for (uint32_t block = 0; block < blocks; ++block) {
+        fillTone(phase, 0.05f);
+        const int64_t blockStart = esp_timer_get_time();
+        duplexBlock();
+        const int64_t blockTime = esp_timer_get_time() - blockStart;
+        if (block == kSettleBlocks) {
+            txOverflows = 0;
+            rxOverflows = 0;
+        }
+        if (block > kSettleBlocks && blockTime > maxBlockUs) maxBlockUs = blockTime;
+    }
+    report("BASE tx_overflows=%u rx_overflows=%u max_block_us=%lld\n", static_cast<unsigned>(txOverflows),
+           static_cast<unsigned>(rxOverflows), static_cast<long long>(maxBlockUs));
 }
 
 void testPartition() {
@@ -335,6 +428,8 @@ void probeTask(void*) {
     duplexBlock();
 
     benchVoices();
+    acousticLoopback();
+    baselineDuplex();
     if (mountCard()) recordWithPlayback();
     testPartition();
 

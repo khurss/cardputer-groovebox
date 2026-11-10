@@ -46,6 +46,24 @@ class TableTests(unittest.TestCase):
     def test_remove_probe_restores_table(self):
         self.assertEqual(slot.remove_probe(slot.add_probe(DEVICE)), DEVICE)
 
+    def test_add_samples_appends_data_partition(self):
+        last = slot.add_samples(slot.add_probe(DEVICE))[-1]
+        _, type_, subtype, offset, size, _, _ = struct.unpack(slot.FORMAT, last)
+        self.assertEqual((type_, subtype, offset, size), (1, 0x82, 0x360000, 0x400000))
+        self.assertEqual(slot.label(last), "samples")
+
+    def test_add_samples_is_idempotent(self):
+        once = slot.add_samples(slot.add_probe(DEVICE))
+        self.assertEqual(slot.add_samples(once), once)
+
+    def test_add_samples_rejects_overlap(self):
+        taken = DEVICE + [entry(1, 0x82, 0x400000, 0x1000, "other")]
+        with self.assertRaises(ValueError):
+            slot.add_samples(taken)
+
+    def test_remove_probe_also_removes_samples(self):
+        self.assertEqual(slot.remove_probe(slot.add_samples(slot.add_probe(DEVICE))), DEVICE)
+
     def test_otadata_for_first_slot_has_known_crc(self):
         sector = slot.otadata_sector(0)
         self.assertEqual(sector[:4], struct.pack("<I", 1))
@@ -86,9 +104,18 @@ class ArgumentTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             slot.validate_args(["slot.py", "install", "/nonexistent/path"])
 
+    def test_install_with_samples_without_path_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "install-with-samples"])
+
+    def test_install_with_samples_with_missing_file_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            slot.validate_args(["slot.py", "install-with-samples", "/nonexistent/path"])
+
     def test_valid_forms_are_accepted(self):
         with tempfile.NamedTemporaryFile() as image:
             slot.validate_args(["slot.py", "install", image.name])
+            slot.validate_args(["slot.py", "install-with-samples", image.name])
         slot.validate_args(["slot.py", "select", "glide"])
         slot.validate_args(["slot.py", "remove-probe"])
 

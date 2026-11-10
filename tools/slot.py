@@ -13,6 +13,8 @@ TABLE_OFFSET = 0x8000
 OTADATA_OFFSET = 0xE000
 PROBE_OFFSET = 0x260000
 PROBE_SIZE = 0x100000
+SAMPLES_OFFSET = 0x360000
+SAMPLES_SIZE = 0x400000
 PORT = "/dev/ttyACM0"
 ROOT = Path(__file__).resolve().parent.parent
 FORMAT = "<HBBII16sI"
@@ -38,7 +40,7 @@ def label(entry):
 
 
 def remove_probe(entries):
-    return [e for e in entries if label(e) != "probe"]
+    return [e for e in entries if label(e) not in ("probe", "samples")]
 
 
 def add_probe(entries):
@@ -52,6 +54,15 @@ def add_probe(entries):
             subtypes.append(subtype)
     next_subtype = max(subtypes, default=0x0F) + 1
     return kept + [struct.pack(FORMAT, 0x50AA, 0, next_subtype, PROBE_OFFSET, PROBE_SIZE, b"probe", 0)]
+
+
+def add_samples(entries):
+    kept = [e for e in entries if label(e) != "samples"]
+    for e in kept:
+        _, _, _, offset, size, _, _ = struct.unpack(FORMAT, e)
+        if offset < SAMPLES_OFFSET + SAMPLES_SIZE and SAMPLES_OFFSET < offset + size:
+            raise ValueError(f"samples partition overlaps partition {label(e)}")
+    return kept + [struct.pack(FORMAT, 0x50AA, 1, 0x82, SAMPLES_OFFSET, SAMPLES_SIZE, b"samples", 0)]
 
 
 def ota_index(entries, name):
@@ -73,18 +84,18 @@ def otadata_image(index):
 
 
 def validate_args(argv):
-    usage = "usage: slot.py install <bin> | select <label> | remove-probe"
+    usage = "usage: slot.py install <bin> | install-with-samples <bin> | select <label> | remove-probe"
     if len(argv) < 2:
         sys.exit(usage)
     command = argv[1]
-    if command == "install":
+    if command in ("install", "install-with-samples"):
         if len(argv) < 3:
             sys.exit(usage)
         if not Path(argv[2]).is_file():
             sys.exit(f"probe image not found: {argv[2]}")
     if command == "select" and len(argv) < 3:
         sys.exit(usage)
-    if command not in ("install", "select", "remove-probe"):
+    if command not in ("install", "install-with-samples", "select", "remove-probe"):
         sys.exit(f"unknown command {command}")
 
 
@@ -123,6 +134,15 @@ def main(argv):
                 sys.exit("probe image does not fit its slot")
             table = add_probe(entries)
             write(work, PROBE_OFFSET, app)
+            write(work, TABLE_OFFSET, build(table))
+            write(work, OTADATA_OFFSET, otadata_image(ota_index(table, "probe")))
+        elif argv[1] == "install-with-samples":
+            app = Path(argv[2]).read_bytes()
+            if len(app) > PROBE_SIZE:
+                sys.exit("probe image does not fit its slot")
+            table = add_samples(add_probe(entries))
+            write(work, PROBE_OFFSET, app)
+            write(work, SAMPLES_OFFSET, b"GBSM".ljust(0x1000, b"\xff"))
             write(work, TABLE_OFFSET, build(table))
             write(work, OTADATA_OFFSET, otadata_image(ota_index(table, "probe")))
         elif argv[1] == "select":
