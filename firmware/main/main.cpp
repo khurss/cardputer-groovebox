@@ -59,12 +59,14 @@ void audioTask(void*) {
         if (load > loadPermille.load(std::memory_order_relaxed)) loadPermille.store(load, std::memory_order_relaxed);
 
         if (!hw::exchangeAudio(outputBlock, inputBlock)) exchangeFailures.fetch_add(1, std::memory_order_relaxed);
-        int peak = micPeak.load(std::memory_order_relaxed);
+        int peak = 0;
         for (uint32_t i = 0; i < hw::kBlockFrames; ++i) {
             const int level = inputBlock[i * 2] < 0 ? -inputBlock[i * 2] : inputBlock[i * 2];
             if (level > peak) peak = level;
         }
-        micPeak.store(peak, std::memory_order_relaxed);
+        int recorded = micPeak.load(std::memory_order_relaxed);
+        while (peak > recorded && !micPeak.compare_exchange_weak(recorded, peak, std::memory_order_relaxed)) {
+        }
     }
 }
 

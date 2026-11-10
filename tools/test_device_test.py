@@ -18,6 +18,9 @@ class ParseTests(unittest.TestCase):
     def test_quiet_reference_of_zero_is_handled(self):
         self.assertTrue(device_test.is_louder(10, 0))
 
+    def test_silence_is_not_louder_than_silence(self):
+        self.assertFalse(device_test.is_louder(0, 0))
+
 
 if __name__ == "__main__":
     unittest.main()

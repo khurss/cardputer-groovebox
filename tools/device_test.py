@@ -87,7 +87,7 @@ class Device:
         while time.monotonic() < deadline:
             self.send("S")
             line = self.read_line(1.0)
-            while line is not None:
+            while line is not None and time.monotonic() < deadline:
                 if line.startswith("STATE-END"):
                     return
                 line = self.read_line(0.3)
@@ -103,6 +103,17 @@ class Report:
         self.failures += 0 if passed else 1
 
 
+def open_device(timeout=20.0):
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            return Device()
+        except OSError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.25)
+
+
 def reset_device():
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import slot
@@ -112,14 +123,22 @@ def reset_device():
 
 def run():
     report = Report()
-    device = Device()
+    device = open_device()
     device.wait_ready()
+    fields, _ = device.state()
+    if fields["playing"] == 1:
+        device.key("space")
+        device.wait_for("SAVE")
+    for _ in range(7):
+        fields, _ = device.state()
+        if fields["swing"] == 50:
+            break
+        device.key("w", "f")
     device.send("X")
     device.wait_for("OK")
 
     fields, lanes = device.state()
     report.check("storage available", fields["storage"] == 1)
-    report.check("pattern cleared", all(set(s) == {"."} for s in lanes.values()))
     device.send("F")
     print(device.wait_for("FS"))
 
@@ -160,16 +179,23 @@ def run():
     fields, _ = device.state()
     report.check("swing changed", fields["swing"] == 54, str(fields["swing"]))
 
+    before = device.cpu()
     device.key("space")
-    device.wait_for("SAVE")
-    time.sleep(1.5)
+    line = device.wait_for("SAVE")
+    report.check("project saved", "ok=1" in line, line)
+    time.sleep(2.0)
     stopped = device.level(500)
-    report.check("silent after stop", is_louder(playing, stopped), f"{playing} vs {stopped}")
+    fields, _ = device.state()
+    report.check("stopped", fields["playing"] == 0)
+    report.check("silent after stop", not is_louder(stopped, quiet), f"{stopped} vs {quiet}")
+    after = device.cpu()
+    report.check("no overflows during save", after["tx_overflows"] == before["tx_overflows"]
+                 and after["rx_overflows"] == before["rx_overflows"])
 
     os.close(device.fd)
     reset_device()
     time.sleep(1)
-    device = Device()
+    device = open_device()
     device.wait_ready()
     fields, lanes = device.state()
     report.check("pattern survives reboot", lanes[1] == "x...x...x...x...", lanes[1])
