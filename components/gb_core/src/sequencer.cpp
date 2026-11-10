@@ -83,10 +83,10 @@ bool Sequencer::advanceSong() {
     return true;
 }
 
-void Sequencer::emitDrums(uint32_t frame, int8_t index) {
+void Sequencer::emitDrums(uint32_t frame, int8_t index, uint32_t local) {
     const DrumPattern& pattern = project_.drums[index];
     const uint16_t stepTicks = gridTicks(pattern.grid);
-    const uint32_t position = sceneTick_ % patternTicks(pattern.length, pattern.grid);
+    const uint32_t position = local % patternTicks(pattern.length, pattern.grid);
     const uint16_t step = static_cast<uint16_t>(position / stepTicks);
     const uint16_t delay = project_.swingEnabled[0] ? swingOffset(step, pattern.grid, project_.swing) : 0;
     if (position != uint32_t{step} * stepTicks + delay) return;
@@ -96,12 +96,15 @@ void Sequencer::emitDrums(uint32_t frame, int8_t index) {
     }
 }
 
-void Sequencer::emitNotes(uint32_t frame, uint8_t track, int8_t index) {
+void Sequencer::emitNotes(uint32_t frame, uint8_t track, int8_t index, uint32_t local, uint32_t sceneLength) {
     const InstrumentPattern& pattern = project_.instruments[track - 1][index];
     const uint32_t total = patternTicks(pattern.length, pattern.grid);
-    const uint32_t position = sceneTick_ % total;
+    const uint32_t position = local % total;
     const uint16_t stepTicks = gridTicks(pattern.grid);
     const bool swung = project_.swingEnabled[track];
+
+    // A pattern that does not divide the scene jumps back at the scene wrap, so its held notes need a release.
+    if (local == 0 && sceneTick_ > 0 && sceneLength % total != 0) emit(frame, EventType::AllNotesOff, track, 0, 0);
 
     uint32_t onTicks[kMaxNotes];
     for (uint8_t i = 0; i < pattern.noteCount; ++i) {
@@ -115,7 +118,11 @@ void Sequencer::emitNotes(uint32_t frame, uint8_t track, int8_t index) {
         const Note& note = pattern.notes[i];
         if (note.startTick >= total) continue;
         const uint32_t length = note.lengthTicks < total ? note.lengthTicks : total - 1;
-        if (position == (onTicks[i] + length) % total) emit(frame, EventType::NoteOff, track, note.pitch, 0);
+        // A note that ends on a swung step is released after that step's delay.
+        const uint32_t end = note.startTick + length;
+        uint32_t off = onTicks[i] + length;
+        if (swung && end % stepTicks == 0) off = end + swingOffset(end / stepTicks, pattern.grid, project_.swing);
+        if (position == off % total) emit(frame, EventType::NoteOff, track, note.pitch, 0);
     }
     for (uint8_t i = 0; i < pattern.noteCount; ++i) {
         const Note& note = pattern.notes[i];
@@ -128,21 +135,24 @@ void Sequencer::processTick(uint32_t frame) {
     if (songMode_) {
         const uint8_t before = songIndex_;
         if (!advanceSong()) {
-            emit(frame, EventType::AllNotesOff, 0, 0, 0);
+            emit(frame, EventType::AllNotesOff, kAllTracks, 0, 0);
             playing_ = false;
             songMode_ = false;
             return;
         }
-        if (songIndex_ != before) emit(frame, EventType::AllNotesOff, 0, 0, 0);
+        if (songIndex_ != before) emit(frame, EventType::AllNotesOff, kAllTracks, 0, 0);
     } else if (queued_ >= 0 && sceneTick_ % kTicksPerBar == 0) {
         begin(static_cast<uint8_t>(queued_));
-        emit(frame, EventType::AllNotesOff, 0, 0, 0);
+        emit(frame, EventType::AllNotesOff, kAllTracks, 0, 0);
     }
 
+    // The scene length is the loop unit: patterns restart at its start.
+    const uint32_t sceneLength = sceneTicks(scene_);
+    const uint32_t local = sceneTick_ % sceneLength;
     const Scene& scene = project_.scenes[scene_];
-    if (scene.pattern[0] != kEmptyPattern) emitDrums(frame, scene.pattern[0]);
+    if (scene.pattern[0] != kEmptyPattern) emitDrums(frame, scene.pattern[0], local);
     for (uint8_t track = 1; track < kTracks; ++track)
-        if (scene.pattern[track] != kEmptyPattern) emitNotes(frame, track, scene.pattern[track]);
+        if (scene.pattern[track] != kEmptyPattern) emitNotes(frame, track, scene.pattern[track], local, sceneLength);
     ++sceneTick_;
 }
 
@@ -151,12 +161,12 @@ uint32_t Sequencer::render(uint32_t frames, Event* out, uint32_t capacity) {
     capacity_ = capacity;
     count_ = 0;
     if (releasePending_) {
-        emit(0, EventType::AllNotesOff, 0, 0, 0);
+        emit(0, EventType::AllNotesOff, kAllTracks, 0, 0);
         releasePending_ = false;
     }
     const uint64_t end = now_ + frames;
     if (playing_ && project_.bpm != bpm_) {
-        originFrame_ = now_;
+        originFrame_ = frameOfTick(nextTick_);
         originTick_ = nextTick_;
         bpm_ = project_.bpm;
     }

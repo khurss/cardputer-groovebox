@@ -7,6 +7,9 @@ namespace gb {
 
 enum class EventType : uint8_t { DrumHit, NoteOn, NoteOff, AllNotesOff };
 
+// AllNotesOff addresses one track, or every track when its track is kAllTracks.
+constexpr uint8_t kAllTracks = 255;
+
 struct Event {
     uint32_t frame;  // Offset inside the rendered block.
     EventType type;
@@ -37,8 +40,8 @@ private:
     bool advanceSong();
     void processTick(uint32_t frame);
     void emit(uint32_t frame, EventType type, uint8_t track, uint8_t data, uint8_t velocity);
-    void emitDrums(uint32_t frame, int8_t index);
-    void emitNotes(uint32_t frame, uint8_t track, int8_t index);
+    void emitDrums(uint32_t frame, int8_t index, uint32_t local);
+    void emitNotes(uint32_t frame, uint8_t track, int8_t index, uint32_t local, uint32_t sceneLength);
 
     const Project& project_;
     uint32_t rate_;

@@ -220,6 +220,95 @@ TEST(stopReleasesNotes) {
     const auto events = run(sequencer, 256);
     CHECK_EQ(events.size(), 1u);
     CHECK_EQ(events[0].type == EventType::AllNotesOff, true);
+    CHECK_EQ(events[0].track, kAllTracks);
+    CHECK_EQ(sequencer.playing(), false);
+}
+
+TEST(tempoChangeKeepsTimeToNextTick) {
+    Project& project = fresh();
+    project.drums[0].velocity[0][4] = 100;
+    Sequencer sequencer(project, kRate);
+    sequencer.playScene(0);
+    Event events[64];
+    sequencer.render(15900, events, 64);
+    project.bpm = 121;
+    CHECK_EQ(sequencer.render(1000, events, 64), 1u);
+    CHECK_EQ(events[0].frame, 100u);
+}
+
+TEST(swungNoteOffDoesNotCutNextNote) {
+    Project& project = fresh();
+    project.swing = 75;
+    project.scenes[0].pattern[1] = 0;
+    InstrumentPattern& pattern = project.instruments[0][0];
+    pattern.noteCount = 2;
+    pattern.notes[0] = {24, 24, 60, 90};
+    pattern.notes[1] = {48, 24, 60, 90};
+    Sequencer sequencer(project, kRate);
+    sequencer.playScene(0);
+    const auto events = run(sequencer, 16000);
+    const auto notesOn = framesOf(events, EventType::NoteOn);
+    CHECK_EQ(notesOn.size(), 2u);
+    if (notesOn.size() == 2) {
+        CHECK_EQ(notesOn[0], 6000u);
+        CHECK_EQ(notesOn[1], 8000u);
+    }
+    const auto notesOff = framesOf(events, EventType::NoteOff);
+    CHECK_EQ(notesOff.size(), 2u);
+    if (notesOff.size() == 2) {
+        CHECK_EQ(notesOff[0], 8000u);
+        CHECK_EQ(notesOff[1], 14000u);
+    }
+}
+
+TEST(shorterPatternRestartsAtSceneLength) {
+    Project& project = fresh();
+    project.scenes[0].pattern[1] = 0;
+    InstrumentPattern& pattern = project.instruments[0][0];
+    pattern.grid = Grid::SixteenthTriplet;
+    pattern.noteCount = 1;
+    pattern.notes[0] = {0, 16, 60, 90};
+    Sequencer sequencer(project, kRate);
+    sequencer.playScene(0);
+    const auto events = run(sequencer, 70000);
+    const auto notesOn = framesOf(events, EventType::NoteOn);
+    CHECK_EQ(notesOn.size(), 3u);
+    if (notesOn.size() == 3) {
+        CHECK_EQ(notesOn[0], 0u);
+        CHECK_EQ(notesOn[1], 42667u);
+        CHECK_EQ(notesOn[2], 64000u);
+    }
+    const auto notesOff = framesOf(events, EventType::AllNotesOff);
+    CHECK_EQ(notesOff.empty(), false);
+    if (!notesOff.empty()) CHECK_EQ(notesOff[0], 64000u);
+    for (const Recorded& event : events) {
+        if (event.type == EventType::AllNotesOff) {
+            CHECK_EQ(event.track, 1);
+            break;
+        }
+    }
+}
+
+TEST(songRepeatsRestartTheScene) {
+    Project& project = fresh();
+    project.scenes[0].pattern[1] = 0;
+    InstrumentPattern& pattern = project.instruments[0][0];
+    pattern.grid = Grid::SixteenthTriplet;
+    pattern.noteCount = 1;
+    pattern.notes[0] = {0, 16, 60, 90};
+    project.song[0] = {0, 2};
+    project.songLength = 1;
+    Sequencer sequencer(project, kRate);
+    sequencer.playSong(0);
+    const auto events = run(sequencer, 130000);
+    const auto notesOn = framesOf(events, EventType::NoteOn);
+    CHECK_EQ(notesOn.size(), 4u);
+    if (notesOn.size() == 4) {
+        CHECK_EQ(notesOn[0], 0u);
+        CHECK_EQ(notesOn[1], 42667u);
+        CHECK_EQ(notesOn[2], 64000u);
+        CHECK_EQ(notesOn[3], 106667u);
+    }
     CHECK_EQ(sequencer.playing(), false);
 }
 
