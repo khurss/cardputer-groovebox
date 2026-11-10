@@ -289,14 +289,14 @@ void recordWithPlayback() {
         }
         if (xStreamBufferSend(writer.stream, mono, sizeof(mono), 0) != sizeof(mono)) ++dropped;
     }
+    const uint32_t txDuringRecord = txOverflows;
+    const uint32_t rxDuringRecord = rxOverflows;
     for (uint32_t second = 0; second < kRecordSeconds; ++second) {
         report("MIC sec=%u peak=%d\n", static_cast<unsigned>(second), secondPeaks[second]);
     }
     report("SDLOOP max_block_us=%lld overflow_blocks:", static_cast<long long>(maxBlockUs));
     for (uint32_t i = 0; i < overflowCount; ++i) report(" %u", static_cast<unsigned>(overflowBlocks[i]));
     report("\n");
-    const uint32_t txDuringRecord = txOverflows;
-    const uint32_t rxDuringRecord = rxOverflows;
     writer.finish = true;
     while (!writer.done) vTaskDelay(pdMS_TO_TICKS(10));
     fclose(file);
