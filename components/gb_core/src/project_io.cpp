@@ -146,6 +146,12 @@ LoadResult readImage(const char* path, Project& out, uint8_t* buffer, size_t cap
     return deserializeProject(buffer, size, out);
 }
 
+// Uses its own Project because deserializing also uses scratchProject().
+bool isGoodFile(const char* path, uint8_t* buffer, size_t capacity) {
+    static Project verified;
+    return readImage(path, verified, buffer, capacity) == LoadResult::Ok;
+}
+
 }  // namespace
 
 size_t serializeProject(const Project& project, uint8_t* buffer, size_t capacity) {
@@ -180,6 +186,7 @@ LoadResult deserializeProject(const uint8_t* data, size_t size, Project& out) {
 }
 
 bool saveProjectFile(const char* path, const Project& project, uint8_t* buffer, size_t capacity) {
+    if (!isValidProject(project)) return false;
     char temporary[kMaxPathLength], backup[kMaxPathLength];
     if (!appendSuffix(temporary, path, ".tmp") || !appendSuffix(backup, path, ".bak")) return false;
     const size_t size = serializeProject(project, buffer, capacity);
@@ -192,12 +199,17 @@ bool saveProjectFile(const char* path, const Project& project, uint8_t* buffer, 
         remove(temporary);
         return false;
     }
-    // FAT cannot rename over an existing file. Between these steps the backup stays loadable.
-    FILE* existing = fopen(path, "rb");
-    if (existing) {
-        fclose(existing);
+    if (!isGoodFile(temporary, buffer, capacity)) {
+        remove(temporary);
+        return false;
+    }
+    // FAT cannot rename over an existing file. Only a good primary may replace the backup, so a
+    // damaged primary is dropped and the last good save stays loadable.
+    if (isGoodFile(path, buffer, capacity)) {
         remove(backup);
         if (rename(path, backup) != 0) return false;
+    } else {
+        remove(path);
     }
     return rename(temporary, path) == 0;
 }

@@ -145,3 +145,29 @@ TEST(missingFileIsReported) {
     const std::string path = tempDir() + "/none.gbp";
     CHECK_EQ(loadProjectFile(path.c_str(), loaded(), buffer, sizeof(buffer)) == LoadResult::NotFound, true);
 }
+
+TEST(damagedPrimaryDoesNotReplaceGoodBackup) {
+    const std::string path = tempDir() + "/p.gbp";
+    Project& first = sample();
+    first.bpm = 133;
+    saveProjectFile(path.c_str(), first, buffer, sizeof(buffer));
+    Project& second = sample();
+    second.bpm = 90;
+    saveProjectFile(path.c_str(), second, buffer, sizeof(buffer));
+    corruptFile(path);
+    Project& third = sample();
+    third.bpm = 70;
+    saveProjectFile(path.c_str(), third, buffer, sizeof(buffer));
+    corruptFile(path);
+    Project& out = loaded();
+    CHECK_EQ(loadProjectFile(path.c_str(), out, buffer, sizeof(buffer)) == LoadResult::Ok, true);
+    CHECK_EQ(out.bpm, 133);
+}
+
+TEST(refusesToSaveInvalidProject) {
+    const std::string path = tempDir() + "/p.gbp";
+    Project& bad = sample();
+    bad.bpm = 0;
+    CHECK_EQ(saveProjectFile(path.c_str(), bad, buffer, sizeof(buffer)), false);
+    CHECK_EQ(loadProjectFile(path.c_str(), loaded(), buffer, sizeof(buffer)) == LoadResult::NotFound, true);
+}
