@@ -34,7 +34,11 @@ struct Command {
 // Gives a blank project its playable starting point.
 void initProject(Project& project);
 
+// True when every index and value in the command is in range. Invalid commands must be ignored.
+bool isValidCommand(const Command& command);
+
 // Applies a command that edits the project; transport commands leave it unchanged.
+// Invalid commands are ignored.
 void applyEdit(Project& project, const Command& command);
 
 }  // namespace gb
