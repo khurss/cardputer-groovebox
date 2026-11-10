@@ -1,4 +1,5 @@
 #include "gb/drum_ui.h"
+#include "gb/ui_style.h"
 
 #include <cstdio>
 #include <cstring>
@@ -10,10 +11,6 @@ namespace gb {
 namespace {
 
 constexpr char kStepKeys[] = "qwertyuiasdfghjk";
-constexpr int kCellWidth = 15;
-constexpr int kCellHeight = 12;
-constexpr int kGridTop = 12;
-constexpr int kFooterTop = kGridTop + kCellHeight * kDrumLanes + 2;
 constexpr uint8_t kSwingValues[] = {50, 54, 58, 62, 66, 70, 75};
 constexpr Grid kGridCycle[] = {Grid::Sixteenth, Grid::Eighth, Grid::Quarter,
                                Grid::ThirtySecond, Grid::SixteenthTriplet, Grid::EighthTriplet};
@@ -106,6 +103,7 @@ void DrumUi::onFnPress(char code) {
             break;
         case 'v':
             if (clipboardFull_) {
+                activate();
                 rememberForUndo();
                 applyPatternContents(clipboard_);
             }
@@ -130,6 +128,7 @@ bool DrumUi::toggleStep(char code) {
     uint8_t next;
     if (shift_) next = current == kAccentVelocity ? kNormalVelocity : kAccentVelocity;
     else next = current == 0 ? kNormalVelocity : 0;
+    if (next) activate();
     rememberForUndo();
     apply(command(CommandType::SetStep, static_cast<uint8_t>(pattern_), static_cast<uint8_t>(lane_),
                   static_cast<uint8_t>(step), next));
@@ -268,41 +267,32 @@ bool DrumUi::takeDirty() {
     return dirty;
 }
 
-void DrumUi::draw(Canvas& canvas, uint32_t sceneTick, bool playing, bool storageAvailable) const {
-    const DrumPattern& pattern = project_.drums[pattern_];
-    canvas.fillRect(0, 0, 240, 135, color::Background);
-
-    char line[64];
-    snprintf(line, sizeof(line), "P%02d %3uBPM %s x%u SW%u %s", pattern_ + 1, project_.bpm, gridName(pattern.grid),
-             pattern.length, project_.swing, playing ? "PLAY" : "STOP");
-    canvas.text(0, 2, line, color::Text);
-    const char* warning = warning_ ? warning_ : (storageAvailable ? nullptr : "NO SD");
-    if (warning) canvas.text(192, 2, warning, color::Warning);
-
-    const uint32_t stepTicks = gridTicks(pattern.grid);
-    const int playStep = playing ? static_cast<int>((sceneTick % patternTicks(pattern.length, pattern.grid)) / stepTicks) : -1;
-
-    for (int lane = 0; lane < kDrumLanes; ++lane) {
-        const int y = kGridTop + lane * kCellHeight;
-        if (lane == lane_) canvas.fillRect(0, y, 240, kCellHeight, color::LaneSelected);
-        for (int step = 0; step < kMaxSteps; ++step) {
-            const uint8_t velocity = pattern.velocity[lane][step];
-            uint16_t fill = color::StepOff;
-            if (step >= pattern.length) fill = color::StepOutside;
-            else if (velocity >= kAccentVelocity) fill = color::StepAccent;
-            else if (velocity > 0) fill = color::StepOn;
-            canvas.fillRect(step * kCellWidth + 1, y + 1, kCellWidth - 2, kCellHeight - 2, fill);
+void DrumUi::draw(Canvas& c, uint32_t tick, bool playing, bool storage) const {
+    const auto& p=project_.drums[pattern_];c.fillRect(0,0,240,135,color::Background);
+    char text[64];snprintf(text,sizeof(text),"DRM P%02d %u %s",pattern_+1,project_.bpm,gridName(p.grid));
+    style::header(c,text,playing?"PLAY":"STOP");
+    constexpr const char* shortNames[]={"KD","SN","CP","CH","OH","TM","RM","PC"};
+    for(int beat=0;beat<4;++beat){snprintf(text,sizeof(text),"%d",beat*4+1);c.text(31+beat*52,18,text,color::Muted);}
+    const int playStep=playing?(tick%patternTicks(p.length,p.grid))/gridTicks(p.grid):-1;
+    for(int lane=0;lane<8;++lane){
+        const int y=28+lane*10;
+        if(lane==lane_)c.fillRect(0,y,27,9,color::LaneSelected);
+        c.text(3,y+1,shortNames[lane],lane==lane_?color::StepAccent:color::Muted);
+        for(int step=0;step<16;++step){
+            const int x=30+step*13;const auto v=p.velocity[lane][step];
+            auto ink=step>=p.length?color::StepOutside:v>=127?color::StepAccent:v?style::tracks[lane%6]:color::StepOff;
+            c.fillRect(x,y,11,8,ink);
+            if(v && step<p.length)c.fillRect(x,y,2,8,color::Text);
+            if(lane==lane_ && step<p.length)c.fillRect(x,y+8,11,1,color::LaneSelected);
         }
     }
-    if (playStep >= 0)
-        canvas.fillRect(playStep * kCellWidth, kGridTop, 1, kCellHeight * kDrumLanes, color::Playhead);
-
-    const DrumSound& sound = project_.sounds[lane_];
-    snprintf(line, sizeof(line), "%s", kLaneNames[lane_]);
-    canvas.text(0, kFooterTop, line, color::Text);
-    canvas.text(174,kFooterTop,"Fn+BS CLR",color::Text);
-    snprintf(line, sizeof(line), "TUNE %u DEC %u TONE %u LVL %u", sound.tune, sound.decay, sound.tone, sound.level);
-    canvas.text(0, kFooterTop + 10, line, color::Text);
+    if(playStep>=0){c.fillRect(29+playStep*13,26,1,82,color::Playhead);c.fillRect(30+playStep*13,25,11,2,color::Playhead);}
+    const auto& sound=project_.sounds[lane_];
+    snprintf(text,sizeof(text),"%s T%u D%u C%u L%u",kLaneNames[lane_],sound.tune,sound.decay,sound.tone,sound.level);
+    c.text(3,111,text,color::Text);
+    const char* warning=warning_?warning_:storage?nullptr:"NO SD - not saved";
+    if(warning)style::footer(c,warning);
+    else {snprintf(text,sizeof(text),"%s x%u SW%u  1-8 sound  Opt menu",gridName(p.grid),p.length,project_.swing);style::footer(c,text);}
 }
 
 }  // namespace gb

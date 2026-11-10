@@ -1,4 +1,5 @@
 #include "gb/ui.h"
+#include "gb/ui_style.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -41,7 +42,7 @@ constexpr MenuItem synthActions[] = {
     {"Copy pattern", "Copy the current notes", O::Shortcut, 'c'},
     {"Paste pattern", "Paste copied notes here", O::Shortcut, 'v'},
     {"Clear all notes", "Keeps sound/grid; undo available", O::Clear},
-    {"Performance", "Live strings / visible keyboard", O::Performance},
+    {"Performance", "Note trails / keyboard minimap", O::Performance},
     {"Piano roll", "View and edit recorded notes", O::PianoRoll}
 };
 constexpr MenuItem sceneActions[] = {
@@ -397,13 +398,13 @@ void AppUi::menuAdjust(const MenuItem& item, int direction) {
     menuApply(c);
 }
 void AppUi::drawMenu(Canvas& canvas) const {
-    canvas.fillRect(0, 0, 240, 135, color::StepOutside);
-    canvas.fillRect(0, 0, 240, 14, color::LaneSelected);
+    canvas.fillRect(0, 0, 240, 135, color::Background);
+
     char line[64]; snprintf(line, sizeof(line), "MENU %s  %u%%  %s", screens[screen_], project_.masterVolume, observedPlaying_ ? "PLAY" : "STOP");
-    canvas.text(4, 3, line, color::Text);
+    style::header(canvas,line,nullptr);
     constexpr const char* tabs[] = {"SCREENS", "ACTIONS", "SETTINGS"};
     for (int i = 0; i < 3; ++i) {
-        canvas.fillRect(3 + i * 79, 17, 76, 12, i == menuPage_ ? color::LaneSelected : color::StepOff);
+        canvas.fillRect(3 + i * 79, 17, 76, 12, i == menuPage_ ? color::LaneSelected : color::Panel);
         canvas.text(7 + i * 79, 19, tabs[i], i == menuPage_ ? color::StepAccent : color::Text);
     }
     const unsigned selected = menuRow_[menuPage_], total = menuCount(menuPage_);
@@ -417,7 +418,7 @@ void AppUi::drawMenu(Canvas& canvas) const {
         if (active) canvas.text(5, y + 2, menuEditing_ ? "*" : ">", color::StepAccent);
         const char* label = item.label;
         if (item.op == O::Record && (screen_ == 5 ? sampler_.recording() : instrument_.busy())) label = screen_ == 5 ? "Stop microphone" : "Finish recording";
-        canvas.text(15, y + 2, label, disabled ? color::Warning : color::Text);
+        canvas.text(15, y + 2, label, disabled ? color::Muted : color::Text);
         char value[16]; menuValue(item, value, sizeof(value));
         if (value[0]) {
             const int x = 230 - std::strlen(value) * 6;
@@ -438,7 +439,7 @@ void AppUi::drawMenu(Canvas& canvas) const {
         else snprintf(line, sizeof(line), "S%02u EMPTY - import or record first", sampler_.slot() + 1);
     }
     canvas.text(3, 110, line, (disabled && !menuNotice_) || warning_ ? color::Warning : color::StepAccent);
-    canvas.text(3, 125, menuEditing_ ? "LEFT/RIGHT change ENTER done BS back" : "Arrows select Tab section Enter BS exit", color::Text);
+    style::footer(canvas,menuEditing_ ? "Arrows change  Enter done  Esc back" : "Arrows select Tab section Enter Esc");
     if (menuConfirm_) {
         canvas.fillRect(9, 37, 222, 69, color::Warning);
         canvas.fillRect(10, 38, 220, 67, color::Background);

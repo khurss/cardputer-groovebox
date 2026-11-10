@@ -1,4 +1,5 @@
 #include "gb/instrument_ui.h"
+#include "gb/ui_style.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -138,13 +139,14 @@ void InstrumentUi::selectTarget(int track, int pattern) {
         pendingPattern_ = pattern;
         return;
     }
+    const bool changingTrack = track != track_;
     track_ = track;
     pattern_ = pattern;
     selected_ = -1;
     cursorTick_ = 0;
     full_ = false;
     undoAvailable_ = false;
-    apply(cmd(CommandType::SetScenePattern, editScene_, track_ + 1, pattern_));
+    if (!changingTrack) apply(cmd(CommandType::SetScenePattern, editScene_, track_ + 1, pattern_));
     focusPattern();
 }
 void InstrumentUi::toggleRecording() {
@@ -280,6 +282,7 @@ void InstrumentUi::enter() {
         full_ = true;
         return;
     }
+    activate();
     remember();
     auto c = cmd(CommandType::AddNote, track_, pattern_);
     c.note = {cursorTick_, gridTicks(p.grid), static_cast<uint8_t>(cursorPitch_), 100};
@@ -379,6 +382,7 @@ void InstrumentUi::fnPress(char code, bool shift) {
             break;
         case 'v':
             if (clipboardFull_) {
+                activate();
                 remember();
                 replace(track_, pattern_, clipboard_);
             }
@@ -469,7 +473,7 @@ void InstrumentUi::draw(Canvas& c, uint32_t tick, bool playing, bool storageAvai
              : armed_   ? "ARM"
              : playing  ? "PLAY"
                         : "STOP");
-    c.text(0, 2, line, color::Text);
+    style::header(c, line, nullptr, style::tracks[track_ + 1]);
     if (performance_) { drawPerformance(c); return; }
     if (parameters_) {
         c.text(3, 25, "SOUND / Fn+arrows select & adjust", color::Text);
@@ -504,7 +508,7 @@ void InstrumentUi::draw(Canvas& c, uint32_t tick, bool playing, bool storageAvai
         const int left = fitNotes_ ? std::max(0, std::min(std::max(0, 128 - span), low - (span - (high - low + 1)) / 2))
                                    : bounded(cursorPitch_ - 5, 0, 116);
         const auto rowFor = [&](int pitch) { return (left + span - 1 - pitch) / pitchStep; };
-        constexpr int x0 = 24, width = 216, y0 = 25, row = 7;
+        constexpr int x0 = 24, width = 216, y0 = 28, row = 7;
         for (int i = 0; i < 12; ++i) {
             const int pitch = left + (11 - i) * pitchStep, y = y0 + i * row;
             const int pc = pitch % 12;
@@ -528,9 +532,11 @@ void InstrumentUi::draw(Canvas& c, uint32_t tick, bool playing, bool storageAvai
             if (n.pitch < left || n.pitch >= left + span) continue;
             const int y = y0 + rowFor(n.pitch) * row;
             const int len = std::min<int>(n.lengthTicks, total), end = n.startTick + len;
-            const auto color = i == selected_ ? color::StepAccent : color::StepOn;
+            const auto color = i == selected_ ? color::StepAccent : style::tracks[(n.pitch % 12) / 2 + 1];
             const int x = x0 + n.startTick * width / total;
-            c.fillRect(x, y, std::max(1, (std::min(end, total) * width / total) - (x - x0)), row - 1, color);
+            const int noteWidth=std::max(1,(std::min(end,total)*width/total)-(x-x0));
+            c.fillRect(x,y,noteWidth,row-1,color);
+            if(noteWidth>2)c.fillRect(x,y,std::max(1,noteWidth*n.velocity/127),1,color::Text);
             if (end > total) c.fillRect(x0, y, std::max(1, (end - total) * width / total), row - 1, color);
         }
         for (const auto& held : held_)
@@ -552,17 +558,18 @@ void InstrumentUi::draw(Canvas& c, uint32_t tick, bool playing, bool storageAvai
     }
     snprintf(line, sizeof(line), "%u/64 OCT%d Q:%s SW%u %s", p.noteCount, octave_,
              project_.recordQuantize[track_] ? "GRID" : "OFF", project_.swing, fitNotes_ ? "FIT" : "1x");
-    c.text(0, 124, line, color::Text);
-    c.text(180, 14, "Fn+BS CLR", color::Text);
+    style::footer(c, line);
+
     const char* notice = warning ? warning : full_ ? "NOTE FULL" : storageAvailable ? nullptr : "NO SD";
     if (notice)
-        c.text(0, 14, notice, color::Warning);
+        c.text(3, 18, notice, color::Warning);
+    else if (!parameters_ && project_.arps[track_].mode == ArpMode::Off) c.text(3,18,"PIANO ROLL   Enter note  Opt actions",color::Muted);
     else if (project_.arps[track_].mode != ArpMode::Off) {
         const auto& a = project_.arps[track_];
         constexpr const char* names[] = {"OFF", "UP", "DOWN", "UPDN"};
         snprintf(line, sizeof(line), "ARP %s %s x%u G%u", names[static_cast<uint8_t>(a.mode)], gridName(a.rate),
                  a.octaves, a.gate);
-        c.text(0, 14, line, color::StepAccent);
+        c.text(3, 18, line, color::StepAccent);
     }
 }
 void InstrumentUi::drawFnSettings(Canvas& c) const {
@@ -629,28 +636,87 @@ void InstrumentUi::loadPreset(uint8_t index) {
     for (uint8_t p = 0; p < 9; ++p) apply(cmd(CommandType::SetSynthParam, track_, p, 0, paramValue(sounds[index], p)));
     soundUndo_ = undoAvailable_ = true; commandUndo_ = false; preset_ = index;
 }
-void InstrumentUi::drawPerformance(Canvas& c) const {
-    char line[64];
-    constexpr const char* roots[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    constexpr const char* scales[] = {"CHROM", "MAJOR", "MINOR", "PENTA"};
-    constexpr const char* rows[] = {"zxcvbnm,./", "asdfghjkl;", "qwertyuiop", "1234567890"};
-    const auto& sound = project_.synths[track_];
-    snprintf(line, sizeof(line), "%s %s  %s  GLIDE %u", project_.keyboardLayout[track_] ? "STR" : "KEY",
-        roots[project_.keyboardRoot[track_]], scales[project_.keyboardScale[track_]], sound.glide);
-    c.text(3, 17, line, color::StepAccent);
-    for (int row = 0; row < 4; ++row) {
-        const int y = 33 + (3 - row) * 18;
-        c.fillRect(4, y + 13, 230, 1, color::StepOff);
-        for (int col = 0; col < 10; ++col) {
-            const char key = rows[row][col];
-            const bool held = held_[static_cast<unsigned>(key)].active;
-            const bool sounding = held && (!project_.keyboardLayout[track_] || stringKey(row) == key);
-            c.fillRect(4 + col * 23, y, 21, 12, sounding ? color::StepOn : held ? color::LaneSelected : color::StepOutside);
-            char label[2] = {key, 0}; c.text(11 + col * 23, y + 2, label, sounding ? color::Background : color::Text);
+bool InstrumentUi::back() {
+    if (parameters_ || performance_) { showPianoRoll(); return true; }
+    if (selected_ >= 0) { selected_ = -1; dirty_ = true; return true; }
+    return false;
+}
+void InstrumentUi::setVisualTime(uint32_t milliseconds, bool playing) {
+    visualPlaying_ = playing;
+    if (!performance_ || milliseconds - visualMs_ < 50) return;
+    visualMs_ = milliseconds;
+    int notes[4] = {-1,-1,-1,-1};
+    if (project_.keyboardLayout[track_]) {
+        for (int row=0;row<4;++row) {int k=stringKey(row);if(k>=0)notes[row]=held_[k].pitch;}
+    } else {
+        int n=0; for (int k=0;k<128 && n<4;++k) if(held_[k].active && held_[k].track==track_)notes[n++]=held_[k].pitch;
+    }
+    if (playing) {
+        const auto& p=current();const uint32_t total=patternTicks(p.length,p.grid), at=tick_%total;
+        for (unsigned i=0;i<p.noteCount;++i) {
+            const auto& note=p.notes[i];if(note.startTick>=total || (at+total-note.startTick)%total>=note.lengthTicks)continue;
+            bool duplicate=false;for(int n:notes)if(n==note.pitch)duplicate=true;
+            if(duplicate)continue;
+            for(auto& n:notes)if(n<0){n=note.pitch;break;}
         }
     }
-    snprintf(line, sizeof(line), "NOTE %s%d  OCT%d  %s", roots[cursorPitch_ % 12], cursorPitch_ / 12 - 1, octave_, recording_ ? "RECORDING" : "OPT: sound / view");
-    c.text(3, 109, line, color::Text);
-    c.text(3, 124, "Alt REC  Space PLAY  Fn+- OCT  Opt MENU", color::StepAccent);
+    const int glideMs=project_.synths[track_].glide*project_.synths[track_].glide*1000/(127*127);
+    for(int v=0;v<4;++v) {
+        for(int x=0;x<kTrail-1;++x)trails_[v][x]=trails_[v][x+1];
+        int value=-1;
+        if(notes[v]>=0) {
+            const int target=notes[v]*256;
+            if(smoothPitch_[v]<0 || glideMs<=50)smoothPitch_[v]=target;
+            else smoothPitch_[v]+=(target-smoothPitch_[v])*50/std::max(50,glideMs);
+            value=smoothPitch_[v];
+        } else smoothPitch_[v]=-1;
+        trails_[v][kTrail-1]=value;
+    }
+    trailCount_=std::min(kTrail,int(trailCount_)+1);
+    int low=128*256,high=-1;
+    for(const auto& trail:trails_)for(int i=kTrail-trailCount_;i<kTrail;++i)if(trail[i]>=0){low=std::min(low,int(trail[i]));high=std::max(high,int(trail[i]));}
+    if(high>=0){
+        const int span=std::min(127*256,std::max(12*256,high-low+8*256)),middle=(low+high)/2;
+        const int targetLow=std::clamp(middle-span/2,0,127*256-span),targetHigh=targetLow+span;
+        if(trailCount_==1){visualLow_=targetLow;visualHigh_=targetHigh;}
+        else {visualLow_+=(targetLow-visualLow_)/8;visualHigh_+=(targetHigh-visualHigh_)/8;}
+    }
+    dirty_=true;
+}
+void InstrumentUi::drawPerformance(Canvas& c) const {
+    char text[64];
+    constexpr const char* roots[]={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+    constexpr const char* scales[]={"CHROM","MAJOR","MINOR","PENTA"};
+    constexpr const char* rows[]={"zxcvbnm,./","asdfghjkl;","qwertyuiop","1234567890"};
+    snprintf(text,sizeof(text),"PERFORM / T%u",track_+1);
+    style::header(c,text,recording_?"REC":armed_?"ARM":visualPlaying_?"PLAY":"LIVE",style::tracks[track_+1]);
+    snprintf(text,sizeof(text),"%s %s  GLIDE %u  P%02u",roots[project_.keyboardRoot[track_]],scales[project_.keyboardScale[track_]],project_.synths[track_].glide,pattern_+1);
+    c.text(5,20,text,color::Muted);
+    const int low=visualLow_,high=visualHigh_,span=std::max(256,high-low);
+    for(int n=0;n<=4;++n) {
+        const int y=35+n*15;style::line(c,29,y,235,y,color::StepOff);
+        const int pitch=std::clamp((high-n*span/4)/256,0,127);snprintf(text,sizeof(text),"%s%d",roots[pitch%12],pitch/12-1);c.text(3,y-3,text,color::Muted);
+    }
+    for(int x=35;x<235;x+=24)for(int y=37;y<96;y+=6)c.fillRect(x,y,1,1,color::StepOutside);
+    bool visible=false;
+    for(int v=0;v<4;++v)for(int i=kTrail-trailCount_;i<kTrail;++i) {
+        const int pitch=trails_[v][i];if(pitch<0)continue;visible=true;
+        const int x=35+i*2,y=std::clamp(95-(pitch-low)*60/span,34,97);
+        const auto ink=style::tracks[((pitch/256)%12)/2+1];
+        if(i>kTrail-trailCount_ && trails_[v][i-1]>=0) {
+            const int prev=std::clamp(95-(trails_[v][i-1]-low)*60/span,34,97);
+            style::line(c,x-2,prev,x,y,ink);style::line(c,x-2,prev+1,x,y+1,ink);
+        }
+        if(i==kTrail-1){c.fillRect(x-2,y-2,5,5,ink);c.fillRect(x,y,1,1,color::Text);}
+    }
+    if(!visible)c.text(57,61,"PLAY A NOTE / START A LOOP",color::Muted);
+    snprintf(text,sizeof(text),"%s%d  OCT %d",roots[cursorPitch_%12],cursorPitch_/12-1,octave_);
+    c.text(5,108,text,color::Text);
+    // Compact map: physical row ordering, individual fingers, no competing labels.
+    for(int row=0;row<4;++row)for(int col=0;col<10;++col) {
+        const bool held=held_[static_cast<unsigned>(rows[row][col])].active;
+        c.fillRect(176+col*6,104+(3-row)*4,4,3,held?style::tracks[row+1]:color::StepOff);
+    }
+    style::footer(c,"Alt rec Space play Esc roll Opt menu");
 }
 }  // namespace gb

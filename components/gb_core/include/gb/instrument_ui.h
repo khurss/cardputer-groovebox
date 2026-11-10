@@ -9,6 +9,8 @@ public:
     void toggleRecording();
     void activate();
     void setScene(uint8_t scene);
+    void setVisualTime(uint32_t milliseconds, bool playing);
+    bool back();
     void setTick(uint32_t tick) {
         tick_ = tick;
         if (recording_)
@@ -77,6 +79,13 @@ private:
     uint16_t cursorTick_ = 0;
     uint8_t parameter_ = 0, editScene_ = 0;
     uint32_t tick_ = 0;
+    static constexpr int kTrail = 100;
+    int16_t trails_[4][kTrail] = {};
+    int32_t smoothPitch_[4] = {-1,-1,-1,-1};
+    int32_t visualLow_ = 48*256, visualHigh_ = 84*256;
+    uint32_t visualMs_ = 0;
+    uint8_t trailCount_ = 0;
+    bool visualPlaying_ = false;
     void focusPattern();
     bool dirty_ = true, locked_ = false, armed_ = false, recording_ = false, ending_ = false, full_ = false;
     bool performance_ = false;

@@ -3,7 +3,7 @@
 namespace gb {
 constexpr unsigned kLibraryEntries = 32;
 constexpr unsigned kProjectName = 24;
-enum class ProjectAction : uint8_t { None, Refresh, Save, New, Copy, Load };
+enum class ProjectAction : uint8_t { None, Refresh, Save, New, Copy, Load, Demos };
 struct ProjectLibraryState {
     char names[kLibraryEntries][kProjectName] = {};
     char current[kProjectName] = "default";

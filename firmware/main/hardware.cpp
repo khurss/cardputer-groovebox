@@ -30,7 +30,7 @@ constexpr int kKeyRows = 4;
 
 // Key layout printed on the Cardputer, indexed by row and column.
 const char kKeyMap[kKeyRows][kKeyColumns] = {
-    {'`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', gb::key::Backspace},
+    {gb::key::Esc, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', gb::key::Backspace},
     {gb::key::Tab, 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'},
     {gb::key::Fn, gb::key::Shift, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', gb::key::Enter},
     {gb::key::Ctrl, gb::key::Opt, gb::key::Alt, 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', ' '},

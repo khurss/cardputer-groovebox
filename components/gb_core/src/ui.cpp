@@ -1,4 +1,5 @@
 #include "gb/ui.h"
+#include "gb/ui_style.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -31,13 +32,10 @@ void AppUi::selectScreen(uint8_t screen) {
     if (screen_ < 2) {
         drums_.setScene(arrangement_.scene());
         instrument_.setScene(arrangement_.scene());
-        if (screen_ == 1)
-            instrument_.activate();
-        else
-            drums_.activate();
     }
 }
 void AppUi::onKey(char code, bool pressed) {
+    if (code == '`') code = key::Esc;
     if (code == '+') code = '=';
     const auto k = static_cast<uint8_t>(code);
     if (k >= 128) return;
@@ -74,6 +72,11 @@ void AppUi::onKey(char code, bool pressed) {
         volumeVisible_ = true;
         volumeUntilMs_ = nowMs_ + 900;
         return;
+    }
+    if (code == key::Esc && !menuOpen_) {
+        if (screen_ == 1 && instrument_.back()) return;
+        if (screen_ == 5 && sampler_.sourceFrames() && (sampler_.browserMode() || sampler_.sequencerMode()) && !sampler_.busy()) { sampler_.setMode(false); return; }
+        toggleMenu(); return;
     }
     if (code == key::Opt) { toggleMenu(); return; }
     if (menuOpen_ && code != ' ') { menuKey(code); return; }
@@ -195,6 +198,7 @@ void AppUi::setWarning(const char* warning) {
 }
 void AppUi::setTime(uint32_t milliseconds) {
     nowMs_ = milliseconds;
+    instrument_.setVisualTime(milliseconds, observedPlaying_);
     if (volumeVisible_ && static_cast<int32_t>(nowMs_ - volumeUntilMs_) >= 0) {
         volumeVisible_ = false;
         dirty_ = true;
@@ -237,7 +241,7 @@ void AppUi::draw(Canvas& c, uint32_t tick, bool playing, bool storage) const {
     else {
         arrangement_.draw(c, screen_, playing);
         const char* notice = warning_ ? warning_ : (storage ? nullptr : "NO SD");
-        if (notice) c.text(0, 114, notice, color::Warning);
+        if (notice) style::footer(c,notice);
     }
     if (sampler_.storageBusy() && screen_ != 5) {
         c.fillRect(0, 113, 240, 10, color::Background);

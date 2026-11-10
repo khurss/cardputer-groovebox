@@ -533,3 +533,26 @@ TEST(undoKeyboardLayoutReleasesTokensFromTheOldLayout) {
     s.key('z',true);s.ui.onKey('x',false);s.run(32000);
     CHECK_EQ(s.p.keyboardLayout[0],0);CHECK_EQ(s.e.activeVoices(),0);
 }
+TEST(escapeWorksForThePhysicalKeyAndNeverDeletesNotes) {
+    Session s;s.key('2',true);s.ui.instrument().showPerformance();
+    s.key('`');CHECK_EQ(s.ui.instrument().performanceVisible(),false);CHECK_EQ(s.ui.menuOpen(),false);
+    s.key(key::Esc);CHECK_EQ(s.ui.menuOpen(),true);s.key(key::Esc);CHECK_EQ(s.ui.menuOpen(),false);
+    s.key(key::Enter);auto count=s.p.instruments[0][0].noteCount;s.key(key::Esc);CHECK_EQ(s.p.instruments[0][0].noteCount,count);
+}
+TEST(performanceTrailsStayInsideDisplayDuringGlideAndAfterSilence) {
+    Session s;s.key('2',true);s.ui.instrument().showPerformance();
+    s.ui.onKey('z',true);
+    for(unsigned ms=50;ms<8000;ms+=50){
+        if(ms==500)s.ui.onKey('p',true);
+        if(ms==1000){s.ui.onKey('z',false);s.ui.onKey('p',false);}
+        s.ui.setTime(ms);MenuCanvas c;s.ui.draw(c,0,false,true);CHECK_EQ(c.valid,true);
+    }
+}
+TEST(browsingScreensAndSynthTracksDoesNotFillEmptySceneSlots) {
+    Session s;s.p.scenes[0].pattern[0]=-1;
+    for(int i=0;i<6;++i)s.key('1'+i,true);
+    s.key('2',true);s.key(']',true);s.key(']',true);s.key(']',true);
+    for(int t=0;t<kTracks;++t)CHECK_EQ(s.p.scenes[0].pattern[t],-1);
+    s.key(key::Enter);CHECK_EQ(s.p.scenes[0].pattern[4],0);
+    s.key('1',true);s.key('q');CHECK_EQ(s.p.scenes[0].pattern[0],0);
+}

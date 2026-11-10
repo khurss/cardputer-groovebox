@@ -1,4 +1,5 @@
 #include "gb/arrangement_ui.h"
+#include "gb/ui_style.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -129,74 +130,57 @@ void ArrangementUi::mixerKey(char code, bool fn, bool shift) {
         apply(command(type, track, 0, 0, !old), command(type, track, 0, 0, old));
     }
 }
-void ArrangementUi::draw(Canvas& c, uint8_t screen, bool playing) const {
-    c.fillRect(0, 0, 240, 135, color::Background);
-    char line[64];
-    if (screen == 2) {
-        snprintf(line, sizeof(line), "SCENES %02u  %s", scene_ + 1, playing ? "PLAY" : "STOP");
-        c.text(0, 2, line, color::Text);
-        c.text(36, 16, "DRUM  T1   T2   T3   T4  SMP", color::Text);
-        const int first = (scene_ / 7) * 7;
-        for (int r = 0; r < 7 && first + r < kScenes; ++r) {
-            const int index = first + r, y = 28 + r * 12;
-            snprintf(line, sizeof(line), "%02d%s", index + 1,
-                     playing && int(status_ & 15) == index   ? "*"
-                     : int((status_ >> 4) & 31) == index + 1 ? "+"
-                                                             : " ");
-            c.text(0, y, line, color::Text);
-            for (int t = 0; t < kTracks; ++t) {
-                const int x = 36 + t * 34;
-                if (index == scene_ && t == column_)
-                    c.fillRect(x, y, 33, 11, color::LaneSelected);
-                const int pat = p_.scenes[index].pattern[t];
-                if (pat < 0)
-                    snprintf(line, sizeof(line), "--");
-                else
-                    snprintf(line, sizeof(line), "P%02d", pat + 1);
-                c.text(x + 2, y + 1, line, color::Text);
+void ArrangementUi::draw(Canvas& c,uint8_t screen,bool playing) const {
+    c.fillRect(0,0,240,135,color::Background);char text[64];
+    constexpr const char* names[]={"MAIN","DRUM","T1","T2","T3","T4","SMP"};
+    if(screen==2){
+        snprintf(text,sizeof(text),"SCENES / %02u",scene_+1);style::header(c,text,playing?"PLAY":"STOP",color::Playhead);
+        for(int t=0;t<kTracks;++t)c.text(43+t*32,19,names[t+1],style::tracks[t]);
+        const int first=(scene_/7)*7;
+        for(int r=0;r<7 && first+r<kScenes;++r){
+            int index=first+r,y=30+r*12;bool live=playing && int(status_&15)==index,queued=int((status_>>4)&31)==index+1;
+            snprintf(text,sizeof(text),"%02d%c",index+1,live?'>':queued?'+':' ');c.text(4,y+2,text,live?color::StepOn:queued?color::StepAccent:color::Muted);
+            for(int t=0;t<kTracks;++t){int x=41+t*32,pat=p_.scenes[index].pattern[t];bool active=index==scene_ && t==column_;
+                c.fillRect(x,y,30,11,active?color::LaneSelected:color::Panel);
+                if(active)style::frame(c,x,y,30,11,style::tracks[t]);
+                if(pat<0)snprintf(text,sizeof(text),"--");else snprintf(text,sizeof(text),"%02d",pat+1);
+                c.text(x+8,y+2,text,pat<0?color::Muted:style::tracks[t]);
             }
         }
-        c.text(0, 124, "[]scene Fn+/- pat Enter:launch", color::Text);
-    } else if (screen == 3) {
-        snprintf(line, sizeof(line), "SONG %u/64 %s", p_.songLength, playing ? "PLAY" : "STOP");
-        c.text(0, 2, line, color::Text);
-        if (!p_.songLength)
-            c.text(0, 22, "Fn+Enter: add selected scene", color::Warning);
-        const int first = (entry_ / 7) * 7;
-        for (int r = 0; r < 7 && first + r < kSongEntries; ++r) {
-            const int i = first + r, y = 28 + r * 12;
-            if (i > p_.songLength)
-                break;
-            if (i == entry_)
-                c.fillRect(0, y, 240, 11, color::LaneSelected);
-            if (i == p_.songLength)
-                snprintf(line, sizeof(line), "%02d + ADD", i + 1);
-            else
-                snprintf(line, sizeof(line), "%02d%s Scene %02u   x%u %s", i + 1,
-                         playing && (status_ & (1u << 9)) && int((status_ >> 10) & 63) == i ? "*" : " ",
-                         p_.song[i].scene + 1, p_.song[i].repeats,
-                         i == entry_ ? (songField_ ? "REPEAT" : "SCENE") : "");
-            c.text(0, y + 1, line, color::Text);
+        style::footer(c,"Fn arrows/pat +/-  Enter launch  Opt");
+    }else if(screen==3){
+        snprintf(text,sizeof(text),"SONG / %u PARTS",p_.songLength);style::header(c,text,playing?"PLAY":"STOP",color::Playhead);
+        if(p_.songLength)for(int i=0;i<p_.songLength;++i){int x=4+i*232/p_.songLength,w=std::max(1,(i+1)*232/p_.songLength-i*232/p_.songLength-1);c.fillRect(x,19,w,5,style::tracks[p_.song[i].scene%6]);if(i==entry_)c.fillRect(x,25,w,2,color::Text);}
+        const int first=(entry_/6)*6;
+        for(int r=0;r<6 && first+r<kSongEntries;++r){int i=first+r,y=31+r*14;if(i>p_.songLength)break;
+            const bool selected=i==entry_,live=playing && (status_&(1u<<9)) && int((status_>>10)&63)==i;
+            c.fillRect(3,y,234,13,selected?color::LaneSelected:color::Panel);
+            snprintf(text,sizeof(text),"%02d%c",i+1,live?'>':' ');c.text(7,y+3,text,live?color::StepOn:color::Muted);
+            if(i==p_.songLength){c.text(34,y+3,"+ ADD SCENE",color::StepAccent);continue;}
+            c.fillRect(32,y+3,3,8,style::tracks[p_.song[i].scene%6]);
+            snprintf(text,sizeof(text),"SCENE %02u",p_.song[i].scene+1);c.text(41,y+3,text,selected&&!songField_?color::StepAccent:color::Text);
+            snprintf(text,sizeof(text),"x%u",p_.song[i].repeats);c.text(173,y+3,text,selected&&songField_?color::StepAccent:color::Muted);
         }
-        c.text(0, 124, "Fn+Enter:add Back:del Fn+/-:edit", color::Text);
-    } else {
-        c.text(0, 2, "MIXER  +/- MAIN  M mute S solo", color::Text);
-        constexpr const char* names[] = {"MAIN", "DRUM", "T1", "T2", "T3", "T4", "SMP"};
-        for (int i = 0; i <= kTracks; ++i) {
-            const int x = i * 34;
-            const int volume = i ? p_.mixer[i - 1].volume : p_.masterVolume;
-            if (i == mix_)
-                c.fillRect(x, 16, 33, 105, color::StepOutside);
-            c.text(x + 2, 20, names[i], i == mix_ ? color::StepAccent : color::Text);
-            c.fillRect(x + 5, 40, 24, 60, color::StepOff);
-            if (volume)
-                c.fillRect(x + 5, 100 - volume * 60 / 100, 24, std::max(1, volume * 60 / 100), color::StepOn);
-            snprintf(line, sizeof(line), "%u%%", volume);
-            c.text(x + 3, 104, line, color::Text);
-            if (i && (p_.mixer[i - 1].mute || p_.mixer[i - 1].solo))
-                c.text(x + 26, 32, p_.mixer[i - 1].mute ? "M" : "S", color::Warning);
+        if(!p_.songLength)c.text(9,66,"Opt > Actions > Insert scene",color::Muted);
+        style::footer(c,"Fn Enter add  Enter play  Esc menu");
+    }else{
+        style::header(c,"MIXER",playing?"PLAY":"STOP");
+        for(int i=0;i<=kTracks;++i){
+            const int x=i*34,volume=i?p_.mixer[i-1].volume:p_.masterVolume;const bool selected=i==mix_,mute=i&&p_.mixer[i-1].mute,solo=i&&p_.mixer[i-1].solo;
+            const auto ink=mute?color::Muted:style::tracks[i];
+            c.fillRect(x+1,19,32,99,selected?color::LaneSelected:color::Panel);
+            if(selected)c.fillRect(x+1,19,32,2,ink);
+            c.text(x+4,24,names[i],selected?color::Text:color::Muted);
+            snprintf(text,sizeof(text),"%u",volume);c.text(x+7,36,text,ink);
+            c.fillRect(x+15,50,3,46,color::StepOff);
+            if(volume)c.fillRect(x+15,96-volume*46/100,3,std::max(1,volume*46/100),ink);
+            for(int y=50;y<=96;y+=11)c.fillRect(x+6,y,5,1,color::StepOff);
+            c.fillRect(x+10,94-volume*44/100,14,4,ink);
+            c.fillRect(x+11,95-volume*44/100,12,1,color::Text);
+            if(i){c.text(x+7,105,"M",mute?color::Warning:color::StepOff);c.text(x+21,105,"S",solo?color::StepAccent:color::StepOff);}
+            else c.text(x+5,105,"VOL",color::Muted);
         }
-        c.text(0, 124, "Fn+arrows select/edit Shift:1%", color::Text);
+        style::footer(c,"Fn arrows level  M mute S solo  Esc");
     }
 }
 }  // namespace gb

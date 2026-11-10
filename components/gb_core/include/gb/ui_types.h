@@ -12,18 +12,21 @@ constexpr char Alt = 5;
 constexpr char Backspace = 8;
 constexpr char Tab = 9;
 constexpr char Enter = 10;
+constexpr char Esc = 27;
 }  // namespace key
 
 namespace color {
 constexpr uint16_t Background = 0x0000;
-constexpr uint16_t StepOff = 0x4228;
+constexpr uint16_t Panel = 0x0108;
+constexpr uint16_t StepOff = 0x4208;
 constexpr uint16_t StepOutside = 0x2108;
-constexpr uint16_t StepOn = 0x07F0;
-constexpr uint16_t StepAccent = 0xFFE0;
-constexpr uint16_t Playhead = 0xF800;
-constexpr uint16_t LaneSelected = 0x051F;
-constexpr uint16_t Text = 0xFFFF;
-constexpr uint16_t Warning = 0xFD20;
+constexpr uint16_t StepOn = 0x07ff;
+constexpr uint16_t StepAccent = 0xffc0;
+constexpr uint16_t Playhead = 0xf81f;
+constexpr uint16_t LaneSelected = 0x2252;
+constexpr uint16_t Text = 0xffff;
+constexpr uint16_t Muted = 0xa536;
+constexpr uint16_t Warning = 0xfd20;
 }  // namespace color
 
 constexpr uint8_t kNormalVelocity = 100;

@@ -120,7 +120,7 @@ def run():
         projects(d)
         _, lines = project(d)
         files = [line[5:] for line in lines if line.startswith('FILE ')]
-        project_row(d, 3 + files.index(first))
+        project_row(d, 4 + files.index(first))
         d.key('enter'); d.key('back')
         r.check('open confirmation can be cancelled', blank in project(d)[0])
         d.key('enter'); d.key('enter')

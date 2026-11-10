@@ -28,3 +28,19 @@ render-synth: build/render_synth
 build/render_synth: tools/render_synth.cpp $(CORE) $(HEADERS)
 	mkdir -p build
 	$(CXX) $(CXXFLAGS) tools/render_synth.cpp $(CORE) -o $@
+
+.PHONY: demos
+demos: build/generate_demos
+	./build/generate_demos
+
+build/generate_demos: tools/generate_demos.cpp $(CORE) $(HEADERS)
+	mkdir -p build
+	$(CXX) $(CXXFLAGS) tools/generate_demos.cpp $(CORE) -o $@
+
+.PHONY: render-demos
+render-demos: build/render_demos
+	./build/render_demos
+
+build/render_demos: tools/render_demos.cpp $(CORE) $(HEADERS)
+	mkdir -p build
+	$(CXX) -std=c++17 -O2 -Icomponents/gb_core/include tools/render_demos.cpp $(CORE) -o $@

@@ -283,7 +283,9 @@ TEST(pianoRollFitsWidelySeparatedNotesWithoutScrolling) {
     class Notes : public Canvas {
     public:
         int visible = 0;
-        void fillRect(int, int, int, int, uint16_t paint) override { visible += paint == color::StepOn; }
+        void fillRect(int x, int y, int w, int h, uint16_t paint) override {
+            visible += x >= 24 && y >= 28 && w > 2 && w < 216 && h == 6 && paint != color::StepOff && paint != color::StepOutside && paint != color::Text;
+        }
         void text(int, int, const char*, uint16_t) override {}
     };
     Keys s;

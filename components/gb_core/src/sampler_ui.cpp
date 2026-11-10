@@ -1,4 +1,5 @@
 #include "gb/sampler_ui.h"
+#include "gb/ui_style.h"
 #include "gb/validate.h"
 #include <algorithm>
 #include <cstdio>
@@ -192,70 +193,56 @@ void SamplerUi::onKey(char code, bool fn, bool shift) {
     else if (fn && code == 'a') parts_ = parts_ == 32 ? 4 : parts_ * 2;
     else if (code == key::Enter) store(fn ? parts_ : 1);
 }
-void SamplerUi::draw(Canvas& c, uint32_t tick, bool playing) const {
-    c.fillRect(0, 0, 240, 135, color::Background);
-    char text[80];
-    std::snprintf(text, sizeof(text), "SAMPLER %s P%02u %u:S%02u %s", recording_ ? "REC" : sequencer_ ? "SEQ" : browser_ ? "FILES" : "CUT", pattern_ + 1, pad_ + 1, slot() + 1, playing ? "PLAY" : "STOP");
-    c.text(0, 2, text, recording_ ? color::Warning : color::Text);
-    if (browser_) {
-        if (!visible_) c.text(0, 36, "Put WAV in groovebox/samples", color::Warning);
-        const unsigned first = (file_ / 7) * 7;
-        for (unsigned i = first; i < std::min<unsigned>(visible_, first + 7); ++i) {
-            int y = 18 + (i - first) * 13;
-            if (i == file_) c.fillRect(0, y, 240, 12, color::LaneSelected);
-            std::snprintf(text, sizeof(text), "%02u %.35s", page_ * 16 + i + 1, names_[i]); c.text(0, y + 1, text, color::Text);
+void SamplerUi::draw(Canvas& c,uint32_t tick,bool playing) const {
+    c.fillRect(0,0,240,135,color::Background);char text[80];
+    snprintf(text,sizeof(text),"SAMPLER / P%02u",pattern_+1);style::header(c,text,recording_?"REC":playing?"PLAY":"STOP",recording_?color::Warning:color::StepOn);
+    const int mode=browser_?0:sequencer_?2:1;constexpr const char* tabs[]={"FILES","CUT","PADS"};
+    for(int i=0;i<3;++i){c.fillRect(3+i*79,18,76,10,i==mode?color::LaneSelected:color::Panel);c.text(24+i*79,19,tabs[i],i==mode?color::StepOn:color::Muted);}
+    if(browser_){
+        if(!visible_){c.text(21,52,"NO WAV FILES",color::Text);c.text(9,71,"SD: /groovebox/samples/",color::Muted);c.text(9,92,"Or press Alt to record microphone",color::StepAccent);}
+        const unsigned first=(file_/6)*6;
+        for(unsigned i=first;i<std::min<unsigned>(visible_,first+6);++i){int y=32+(i-first)*14;
+            c.fillRect(3,y,231,13,i==file_?color::LaneSelected:color::Panel);
+            snprintf(text,sizeof(text),"%02u",page_*16+i+1);c.text(5,y+3,text,color::Muted);
+            snprintf(text,sizeof(text),"%.34s",names_[i]);c.text(23,y+3,text,i==file_?color::Text:color::Muted);
         }
-        c.text(0, 112, pending_ ? message_ : "Fn+arrows select Enter open [] page", color::Text);
-    } else if (sequencer_) {
-        const auto& p = p_.samplePatterns[pattern_];
-        const unsigned step = (tick % patternTicks(p.steps.length, p.steps.grid)) / gridTicks(p.steps.grid);
-        for (int pad = 0; pad < kSamplePads; ++pad) {
-            const int y = 20 + pad * 10;
-            std::snprintf(text, sizeof(text), "%u", pad + 1); c.text(0, y + 1, text, pad == pad_ ? color::StepAccent : color::Text);
-            for (int s = 0; s < kMaxSteps; ++s) {
-                const auto v = p.steps.velocity[pad][s];
-                c.fillRect(15 + s * 14, y, 12, 8, s >= p.steps.length ? color::StepOutside : v ? (v == 127 ? color::StepAccent : color::StepOn) : color::StepOff);
-                if (playing && s == int(step)) c.fillRect(15 + s * 14, y, 12, 1, color::Playhead);
+        if(visible_>6){c.fillRect(237,32,2,82,color::StepOff);c.fillRect(237,32+file_*70/(visible_-1),2,12,color::StepOn);}
+        style::footer(c,pending_?message_:"Fn arrows choose  Enter load  Esc back");
+    }else if(sequencer_){
+        const auto& p=p_.samplePatterns[pattern_];const unsigned step=(tick%patternTicks(p.steps.length,p.steps.grid))/gridTicks(p.steps.grid);
+        for(int pad=0;pad<8;++pad){int y=31+pad*10;bool selected=pad==pad_;
+            if(selected)c.fillRect(1,y,39,9,color::LaneSelected);
+            snprintf(text,sizeof(text),"%u:%02u",pad+1,p.slot[pad]+1);c.text(3,y+1,text,selected?color::StepAccent:color::Muted);
+            for(int n=0;n<16;++n){auto v=p.steps.velocity[pad][n];c.fillRect(43+n*12,y,10,8,n>=p.steps.length?color::StepOutside:v==127?color::StepAccent:v?style::tracks[pad%6]:color::StepOff);
+                if(playing && n==int(step))c.fillRect(43+n*12,y,10,1,color::Playhead);
             }
         }
-        std::snprintf(text, sizeof(text), "PAD%u -> S%02u %s x%u %s", pad_ + 1, slot() + 1, p_.samples[slot()].source[0] ? "READY" : "EMPTY", p.steps.length, grids[static_cast<unsigned>(p.steps.grid)]);
-        c.text(0, 105, text, color::Text);
-        c.text(0, 115, pending_ ? message_ : "1..8 pad q..k steps Fn+/- assign", color::Text);
-    } else {
-        const uint32_t span = viewEnd_ > viewStart_ ? viewEnd_ - viewStart_ : 1;
-        int displayPeak = 1;
-        for (const auto& p : peaks_) displayPeak = std::max(displayPeak, std::max(-int(p.low), int(p.high)));
-        for (unsigned x = 0; x < kWaveColumns; ++x) {
-            const uint32_t at = viewStart_ + uint64_t(x) * span / kWaveColumns;
-            const int top = 63 - (int(peaks_[x].high) * 35 / displayPeak), bottom = 63 - (int(peaks_[x].low) * 35 / displayPeak);
-            c.fillRect(x, 27, 1, 73, !recording_ && at >= start_ && at < end_ ? color::StepOutside : color::Background);
-            c.fillRect(x, top, 1, std::max(1, bottom - top + 1), recording_ ? color::Warning : color::StepOn);
-        }
-        if (!recording_ && frames_) {
-            auto mark = [&](uint32_t frame, uint16_t color) {
-                if (frame >= viewStart_ && frame <= viewEnd_) c.fillRect(std::min<uint32_t>(239, uint64_t(frame - viewStart_) * 240 / span), 26, 1, 75, color);
-            };
-            for (unsigned i = 0; i < kSampleSlots; ++i) {
-                const auto& clip = p_.samples[i];
-                if (clip.source[0] && !std::strcmp(clip.source, source_)) {
-                    mark(clip.start, color::LaneSelected); mark(clip.end, color::LaneSelected);
-                }
+        snprintf(text,sizeof(text),"S%02u %.32s",slot()+1,p_.samples[slot()].source[0]?p_.samples[slot()].source:"EMPTY / load or record first");c.text(3,112,text,color::Text);
+        style::footer(c,pending_?message_:"1-8 pad  q..k steps  Esc cut  Opt menu");
+    }else{
+        snprintf(text,sizeof(text),"%.38s",recording_?"MIC -> SD / no monitoring":source_[0]?source_:"NO SOURCE");c.text(3,31,text,color::Muted);
+        const uint32_t span=viewEnd_>viewStart_?viewEnd_-viewStart_:1;
+        int peak=1;for(const auto& p:peaks_)peak=std::max(peak,std::max(-int(p.low),int(p.high)));
+        if(frames_ || recording_){
+            for(unsigned x=0;x<kWaveColumns;++x){const uint32_t at=viewStart_+uint64_t(x)*span/kWaveColumns;
+                bool selected=!recording_ && at>=start_ && at<end_;
+                c.fillRect(x,42,1,52,selected?color::Panel:color::Background);
+                int top=68-int(peaks_[x].high)*25/peak,bottom=68-int(peaks_[x].low)*25/peak;
+                c.fillRect(x,top,1,std::max(1,bottom-top+1),recording_?color::Warning:selected?color::StepOn:color::Muted);
             }
-            mark(start_, color::LaneSelected); mark(end_, color::LaneSelected); mark(cursor_, color::StepAccent);
-            if (parts_ > 1) for (unsigned i = 1; i < parts_; ++i) {
-                const uint32_t frame = start_ + uint64_t(end_ - start_) * i / parts_;
-                if (frame >= viewStart_ && frame <= viewEnd_) c.fillRect(std::min<uint32_t>(239, uint64_t(frame - viewStart_) * 240 / span), 27, 1, 5, color::Warning);
-            }
-        }
-        std::snprintf(text, sizeof(text), "%.38s", recording_ ? "MIC -> SD (no monitoring)" : source_); c.text(0, 16, text, color::Text);
-        if (recording_)
-            std::snprintf(text, sizeof(text), "%lu.%03lus recorded | peak %u%%", static_cast<unsigned long>(frames_ / kSampleRate), static_cast<unsigned long>(frames_ % kSampleRate / 32), unsigned(displayPeak * 100 / 32768));
-        else
-            std::snprintf(text, sizeof(text), "%lu.%03lus A%lu B%lums N%u", static_cast<unsigned long>(cursor_ / kSampleRate), static_cast<unsigned long>(cursor_ % kSampleRate / 32), static_cast<unsigned long>(start_ / 32), static_cast<unsigned long>(end_ / 32), parts_);
-        c.text(0, 104, text, color::Text);
-        c.text(0, 114, pending_ ? message_ : recording_ ? "Alt stop recording" : "A start D end Enter save Fn+Enter chop", color::Text);
+            if(!recording_){
+                auto mark=[&](uint32_t at,uint16_t ink,bool handle){if(at>=viewStart_&&at<=viewEnd_){int x=std::min<uint32_t>(239,uint64_t(at-viewStart_)*240/span);c.fillRect(x,41,1,54,ink);if(handle)c.fillRect(std::clamp(x-2,0,235),41,5,3,ink);}};
+                for(unsigned i=0;i<kSampleSlots;++i){const auto& clip=p_.samples[i];if(clip.source[0]&&!strcmp(clip.source,source_)){mark(clip.start,color::StepOff,false);mark(clip.end,color::StepOff,false);}}
+                mark(start_,color::StepOn,true);mark(end_,color::StepOn,true);mark(cursor_,color::Playhead,true);
+                for(unsigned i=1;i<parts_;++i){const uint32_t at=start_+uint64_t(end_-start_)*i/parts_;if(at>=viewStart_&&at<=viewEnd_)c.fillRect(std::min<uint32_t>(239,uint64_t(at-viewStart_)*240/span),90,1,5,color::StepAccent);}
+                snprintf(text,sizeof(text),"A%lums B%lums / %u cuts",static_cast<unsigned long>(start_/32),static_cast<unsigned long>(end_/32),parts_);
+            }else snprintf(text,sizeof(text),"REC %lu.%02lus / PEAK %u%%",static_cast<unsigned long>(frames_/kSampleRate),static_cast<unsigned long>(frames_%kSampleRate/320),unsigned(peak*100/32768));
+            c.text(3,100,text,color::Text);
+            c.fillRect(3,113,234,5,color::StepOff);
+            if(frames_){const int x=std::clamp<int>(uint64_t(viewStart_)*234/frames_,0,233),end=std::clamp<int>(uint64_t(viewEnd_)*234/frames_,x+1,234);c.fillRect(3+x,113,end-x,5,color::LaneSelected);}
+        }else{c.text(36,57,"RECORD OR LOAD A WAV",color::Text);c.text(24,79,"Alt mic / Fn+B browse files",color::StepAccent);}
+        style::footer(c,pending_?message_:recording_?"Alt stop recording / waveform is live":"A/B: A D  Enter save  Fn Enter chop");
     }
-    c.text(0, 125, pending_ ? "WORKING..." : message_, color::StepAccent);
 }
 void SamplerUi::drawFnMenu(Canvas& c) const {
     c.text(3, 44, "B browse WAV  Alt mic record/stop", color::Text);

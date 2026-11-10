@@ -19,6 +19,7 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "gb/engine.h"
+#include "gb/demo_projects.h"
 #include "gb/project_io.h"
 #include "gb/spsc.h"
 #include "gb/ui.h"
@@ -39,6 +40,7 @@ uint8_t fileBuffer[gb::kProjectBufferSize];
 int16_t outputBlock[hw::kBlockFrames * 2], inputBlock[hw::kBlockFrames * 2];
 std::atomic<int> micPeak{0};
 std::atomic<uint32_t> micPower{0}, outputPower{0}, outputPeak{0};
+std::atomic<uint32_t> uiFrames{0}, uiFrameMaxUs{0};
 std::atomic<uint32_t> loadPermille{0}, exchangeFailures{0}, peakVoices{0};
 gb::Engine* engine = nullptr;
 TaskHandle_t audioTaskHandle = nullptr;
@@ -237,17 +239,18 @@ void runConsoleLine(gb::AppUi& ui, char* line) {
         if (strcmp(line, "C reset") == 0) {
             loadPermille.store(0);
             peakVoices.store(0);
+            uiFrames.store(0); uiFrameMaxUs.store(0);
         }
         const auto stats = hw::audioStats();
         printf(
             "CPU load_permille=%u tx_overflows=%u rx_overflows=%u failures=%u active_voices=%u peak_voices=%u "
-            "event_overflows=%u heap_free=%u audio_stack_free=%u ui_stack_free=%u voice_capacity=%u voice_budget=%u\n",
+            "event_overflows=%u heap_free=%u audio_stack_free=%u ui_stack_free=%u voice_capacity=%u voice_budget=%u ui_frames=%u ui_frame_max_us=%u\n",
             static_cast<unsigned>(loadPermille.load()), static_cast<unsigned>(stats.txOverflows),
             static_cast<unsigned>(stats.rxOverflows), static_cast<unsigned>(exchangeFailures.load()),
             static_cast<unsigned>(engine->activeVoices()), static_cast<unsigned>(peakVoices.load()),
             static_cast<unsigned>(engine->eventOverflows()), static_cast<unsigned>(esp_get_free_heap_size()),
             static_cast<unsigned>(uxTaskGetStackHighWaterMark(audioTaskHandle)),
-            static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)), static_cast<unsigned>(gb::kSynthVoices), unsigned(engine->voiceBudget()));
+            static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)), static_cast<unsigned>(gb::kSynthVoices), unsigned(engine->voiceBudget()), unsigned(uiFrames.load()), unsigned(uiFrameMaxUs.load()));
     } else if (strcmp(line, "P") == 0) {
         printf("PROJECT name=%s count=%u available=%u\nMESSAGE %s\n", ui.library().current, ui.library().count, ui.library().available, ui.library().message);
         for (unsigned i = 0; i < ui.library().count; ++i) printf("FILE %s\n", ui.library().names[i]);
@@ -483,7 +486,17 @@ void uiTask(void*) {
         if (request == gb::ProjectAction::Refresh) library.scan(ui.library());
         else if (request != gb::ProjectAction::None) {
             if (playing || ui.busy() || upload || !storageAvailable) ui.projectResult("Stop transport / recording first");
-            else if (request == gb::ProjectAction::Save) {
+            else if (request == gb::ProjectAction::Demos) {
+                auto* demo = new (std::nothrow) gb::Project;
+                unsigned saved = 0;
+                if (demo) for (unsigned i=0;i<gb::kDemoCount;++i) {
+                    gb::makeDemoProject(i,*demo);
+                    if (library.save(gb::demoName(i),*demo,true)) ++saved;
+                }
+                delete demo;
+                ui.projectResult(saved==3 ? "3 demo songs added" : saved ? "Added demos; existing names kept" : "No new files; names exist / SD error");
+                library.scan(ui.library());
+            } else if (request == gb::ProjectAction::Save) {
                 const bool ok = saveAllowed && gb::saveProjectFile(projectPath, uiProject, fileBuffer, sizeof(fileBuffer));
                 ui.projectResult(ok ? "Project saved" : "Save failed; use Save copy");
                 if (ok) { savedEdits = seenEdits; savePending = false; }
@@ -543,8 +556,12 @@ void uiTask(void*) {
         if (now >= nextFrame && (ui.takeDirty() || playing || playing != lastPlaying)) {
             nextFrame = now + kFrameMs;
             lastPlaying = playing;
+            const int64_t drawStart = esp_timer_get_time();
             ui.draw(canvas, engine->sceneTick(), playing, storageAvailable);
             sprite.pushSprite(0, 0);
+            const auto drawUs = static_cast<uint32_t>(esp_timer_get_time() - drawStart);
+            uiFrames.fetch_add(1);
+            if (drawUs > uiFrameMaxUs.load()) uiFrameMaxUs.store(drawUs);
         }
         vTaskDelay(pdMS_TO_TICKS(5));
     }
