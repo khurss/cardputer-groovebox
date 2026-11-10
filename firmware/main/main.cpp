@@ -233,8 +233,11 @@ void runConsoleLine(gb::AppUi& ui, char* line) {
     else if (line[0] == 'I')
         printInstrument(ui);
     else if (line[0] == 'A') {
-        printf("ARR song_length=%u master=%u output_limit=%u\n", uiProject.songLength, uiProject.masterVolume,
-               engine->outputLimit());
+        const auto scenes=ui.arrangement().view(2,engine->playing()),song=ui.arrangement().view(3,engine->playing());
+        printf("ARR song_length=%u master=%u output_limit=%u scene_first=%u scene_count=%u scene_live=%d scene_pinned=%u scene_follow=%u song_first=%u song_count=%u song_live=%d song_pinned=%u song_follow=%u edit_scene=%u edit_row=%u\n",
+               uiProject.songLength,uiProject.masterVolume,engine->outputLimit(),
+               scenes.first,scenes.count,scenes.live,scenes.pinned,scenes.following,
+               song.first,song.count,song.live,song.pinned,song.following,ui.arrangement().scene(),ui.arrangement().songEntry());
         for (int i = 0; i < gb::kScenes; ++i) {
             printf("SCENE index=%d", i);
             for (int t = 0; t < gb::kTracks; ++t) printf(" t%d=%d", t, uiProject.scenes[i].pattern[t]);

@@ -52,13 +52,15 @@ constexpr MenuItem sceneActions[] = {
     {"Copy scene", "Copy all six track assignments", O::Shortcut, 'c'},
     {"Paste scene", "Paste all six track assignments", O::Shortcut, 'v'},
     {"Undo", "Undo the last arrangement edit", O::Shortcut, 'z'},
-    {"Empty track slot", "Remove this pattern from scene", O::Shortcut, key::Backspace}
+    {"Empty track slot", "Remove this pattern from scene", O::Shortcut, key::Backspace},
+    {"Follow playback", "F: scroll to the playing scene", O::FollowPlayback}
 };
 constexpr MenuItem songActions[] = {
     {"Play from row", "Start song at the selected row", O::Play},
     {"Insert scene", "Insert selected scene at this row", O::Shortcut, key::Enter},
     {"Delete row", "Remove this song entry", O::Shortcut, key::Backspace},
-    {"Undo", "Undo the last arrangement edit", O::Shortcut, 'z'}
+    {"Undo", "Undo the last arrangement edit", O::Shortcut, 'z'},
+    {"Follow playback", "F: scroll to the playing song row", O::FollowPlayback}
 };
 constexpr MenuItem mixerActions[] = {
     {"Play / stop", "Space also controls playback", O::Play},
@@ -255,6 +257,7 @@ void AppUi::menuKey(char code) {
 }
 void AppUi::menuRun(const MenuItem& item) {
     switch (item.op) {
+        case O::FollowPlayback: arrangement_.onKey(screen_,'f',false,false); menuOpen_=false; break;
         case O::VisualParameter: visual_.adjust(item.argument, 1); break;
         case O::Performance:
             instrument_.showPerformance(); menuOpen_ = false; break;

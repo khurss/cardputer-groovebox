@@ -18,8 +18,10 @@ int main(){gb::makeDemoProject(0,p);gb::AppUi ui(p,sink,nullptr);Dump c;bool ren
  key('2',true);ui.instrument().showPianoRoll();key(']',true);key(']',true);key(']',true);draw(2);
  ui.instrument().showParameters();draw(3);
  key('5',true);p.mixer[2].mute=true;p.mixer[4].solo=true;draw(4);
+ ui.setTransport(8u|(1u<<9)|(12u<<10)|(1u<<16));ui.setPlayback(true);renderPlaying=true;
  key('4',true);draw(5);
  key('3',true);draw(6);
+ ui.setTransport(0);ui.setPlayback(false);renderPlaying=false;
  key('6',true);gb::SampleJob job;ui.sampler().takeJob(job);gb::SampleResult r;r.job=job;r.ok=true;r.frames=32000*4;r.files=4;r.visibleFiles=4;
  strcpy(r.names[0],"drum-break.wav");strcpy(r.names[1],"night-drive.wav");strcpy(r.names[2],"vocal-chop.wav");strcpy(r.names[3],"tape-noise.wav");ui.sampler().receive(r);draw(7);
  ui.sampler().onKey(gb::key::Enter,false,false);ui.sampler().takeJob(job);r={};r.job=job;r.ok=true;r.frames=32000*4;
@@ -39,4 +41,7 @@ int main(){gb::makeDemoProject(0,p);gb::AppUi ui(p,sink,nullptr);Dump c;bool ren
  key('8',true);
  for(int mode=0;mode<4;++mode){auto settings=ui.visual().settings();settings.palette=mode;settings.gain=3;ui.visual().setSettings(settings);advance();draw(14+mode);key('/');}
  key(gb::key::Opt);key(gb::key::Tab);key(gb::key::Tab);draw(18);
+ key(gb::key::Opt);key('4',true);
+ ui.setTransport(8u|(1u<<9)|(12u<<10)|(1u<<16));ui.setPlayback(true);
+ key(';');draw(19);
 }

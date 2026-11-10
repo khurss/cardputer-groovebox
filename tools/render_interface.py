@@ -14,7 +14,7 @@ SCREENS = (
     'performance', 'drums', 'piano-roll', 'sound-editor', 'mixer', 'song',
     'scenes', 'sampler-files', 'sampler-cut', 'sampler-pads', 'menu', 'projects',
     'quick-start', 'mixer-fft', 'visual-spectrum', 'visual-wave',
-    'visual-waterfall', 'visual-orbit', 'visual-settings',
+    'visual-waterfall', 'visual-orbit', 'visual-settings', 'song-follow-browse',
 )
 ROOT = Path(__file__).resolve().parent.parent
 FONT = ROOT / 'firmware/managed_components/m5stack__m5gfx/src/lgfx/Fonts/glcdfont.h'

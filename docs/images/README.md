@@ -21,6 +21,7 @@ captures. Each individual screen is **480×270**, a 2× rendering of the native
 | [sampler-pads.png](sampler-pads.png) | Pad slots and step sequencer |
 | [menu.png](menu.png) | Screen selection and menu tabs |
 | [projects.png](projects.png) | Save, create, copy and demo actions |
+| [song-follow-browse.png](song-follow-browse.png) | Playing row pinned above a different edit selection |
 | [quick-start.png](quick-start.png) | First page of the built-in tutorial |
 
 Additional audio views: [gallery](audio-visuals.png), [FFT mixer](mixer-fft.png),

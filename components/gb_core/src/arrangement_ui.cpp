@@ -40,6 +40,15 @@ void ArrangementUi::adjustMaster(int delta) {
 }
 void ArrangementUi::onKey(uint8_t screen, char code, bool fn, bool shift) {
     dirty_ = true;
+    if (screen == 2 || screen == 3) {
+        bool& follow = screen == 2 ? followScenes_ : followSong_;
+        if (code == 'f' && !fn) { follow = true; return; }
+        // Browsing/editing preserves the user's cursor; a distant live row is pinned.
+        const bool arrow = fn && (code == ';' || code == '.' || code == ',' || code == '/');
+        if (arrow || code == '-' || code == '=' || code == key::Backspace ||
+            (fn && (code == 'z' || code == 'c' || code == 'v' || code == key::Enter)) ||
+            (screen == 2 && (code == '[' || code == ']' || (code >= '1' && code <= '6')))) follow = false;
+    }
     if (fn && code == 'z') {
         undo();
         return;
@@ -130,39 +139,76 @@ void ArrangementUi::mixerKey(char code, bool fn, bool shift) {
         apply(command(type, track, 0, 0, !old), command(type, track, 0, 0, old));
     }
 }
+ArrangementView ArrangementUi::view(uint8_t screen,bool playing) const {
+    ArrangementView v;
+    const int selected=screen==2?scene_:entry_;
+    if(playing && screen==2) v.live=status_&15;
+    else if(playing && screen==3 && (status_&(1u<<9)) && int((status_>>10)&63)<p_.songLength)
+        v.live=(status_>>10)&63;
+    v.following=v.live>=0 && (screen==2?followScenes_:followSong_);
+    if(v.following) v.first=(v.live/6)*6;
+    else if(v.live>=0) {
+        v.first=(selected/5)*5;
+        v.pinned=v.live<v.first || v.live>=v.first+5;
+        if(v.pinned) v.count=5;
+    } else v.first=(selected/6)*6;
+    return v;
+}
 void ArrangementUi::draw(Canvas& c,uint8_t screen,bool playing) const {
     c.fillRect(0,0,240,135,color::Background);char text[64];
     constexpr const char* names[]={"MAIN","DRUM","T1","T2","T3","T4","SMP"};
+    const auto viewport=view(screen,playing);
+    const auto minimap=[&](int total,int selected,int live,int queued) {
+        for(int i=0;i<total;++i) {
+            const int x=4+i*232/total,w=std::max(1,(i+1)*232/total-i*232/total-1);
+            const int scene=screen==2?i:p_.song[i].scene;
+            c.fillRect(x,20,w,4,style::tracks[scene%6]);
+            if(i==selected)c.fillRect(x,26,w,2,color::Text);
+            if(i==queued)c.fillRect(x,24,w,1,color::StepAccent);
+            if(i==live) { c.fillRect(x,17,w,2,color::Playhead);c.fillRect(x,20,w,4,color::Playhead); }
+        }
+    };
     if(screen==2){
-        snprintf(text,sizeof(text),"SCENES / %02u",scene_+1);style::header(c,text,playing?"PLAY":"STOP",color::Playhead);
-        for(int t=0;t<kTracks;++t)c.text(43+t*32,19,names[t+1],style::tracks[t]);
-        const int first=(scene_/7)*7;
-        for(int r=0;r<7 && first+r<kScenes;++r){
-            int index=first+r,y=30+r*12;bool live=playing && int(status_&15)==index,queued=int((status_>>4)&31)==index+1;
-            snprintf(text,sizeof(text),"%02d%c",index+1,live?'>':queued?'+':' ');c.text(4,y+2,text,live?color::StepOn:queued?color::StepAccent:color::Muted);
+        char state[20];snprintf(state,sizeof(state),playing?"PLAY %02u":"STOP",unsigned(status_&15)+1);
+        snprintf(text,sizeof(text),"SCENES EDIT %02u",scene_+1);style::header(c,text,state,color::Playhead);
+        minimap(kScenes,scene_,viewport.live,playing?int((status_>>4)&31)-1:-1);
+        for(int t=0;t<kTracks;++t)c.text(43+t*32,31,names[t+1],style::tracks[t]);
+        const auto row=[&](int index,int y,bool pinned) {
+            const bool live=viewport.live==index,queued=playing && int((status_>>4)&31)==index+1;
+            snprintf(text,sizeof(text),"%02d%c",index+1,live?'>':queued?'+':' ');c.text(4,y+2,text,live?color::Playhead:queued?color::StepAccent:color::Muted);
             for(int t=0;t<kTracks;++t){int x=41+t*32,pat=p_.scenes[index].pattern[t];bool active=index==scene_ && t==column_;
                 c.fillRect(x,y,30,11,active?color::LaneSelected:color::Panel);
                 if(active)style::frame(c,x,y,30,11,style::tracks[t]);
                 if(pat<0)snprintf(text,sizeof(text),"--");else snprintf(text,sizeof(text),"%02d",pat+1);
                 c.text(x+8,y+2,text,pat<0?color::Muted:style::tracks[t]);
             }
-        }
-        style::footer(c,"Arrows/pat +/-  Enter launch  Opt");
+            if(live)c.fillRect(1,y,2,11,color::Playhead);
+            if(pinned)c.fillRect(4,y+11,230,1,color::Playhead);
+        };
+        if(viewport.pinned)row(viewport.live,42,true);
+        for(int r=0;r<viewport.count && viewport.first+r<kScenes;++r)
+            row(viewport.first+r,42+(r+viewport.pinned)*12,false);
+        style::footer(c,viewport.following?"FOLLOW  Arrows edit  Enter launch":"F follow  Arrows edit  Enter launch");
     }else if(screen==3){
-        snprintf(text,sizeof(text),"SONG / %u PARTS",p_.songLength);style::header(c,text,playing?"PLAY":"STOP",color::Playhead);
-        if(p_.songLength)for(int i=0;i<p_.songLength;++i){int x=4+i*232/p_.songLength,w=std::max(1,(i+1)*232/p_.songLength-i*232/p_.songLength-1);c.fillRect(x,19,w,5,style::tracks[p_.song[i].scene%6]);if(i==entry_)c.fillRect(x,25,w,2,color::Text);}
-        const int first=(entry_/6)*6;
-        for(int r=0;r<6 && first+r<kSongEntries;++r){int i=first+r,y=31+r*14;if(i>p_.songLength)break;
-            const bool selected=i==entry_,live=playing && (status_&(1u<<9)) && int((status_>>10)&63)==i;
+        char state[20];if(viewport.live>=0)snprintf(state,sizeof(state),"PLAY %02u",unsigned(viewport.live)+1);else snprintf(state,sizeof(state),playing?"SCENE":"STOP");
+        snprintf(text,sizeof(text),"SONG EDIT %02u/%u",entry_+1,p_.songLength);style::header(c,text,state,color::Playhead);
+        minimap(p_.songLength,entry_,viewport.live,-1);
+        const auto row=[&](int i,int y,bool pinned) {
+            const bool selected=i==entry_,live=viewport.live==i;
             c.fillRect(3,y,234,13,selected?color::LaneSelected:color::Panel);
-            snprintf(text,sizeof(text),"%02d%c",i+1,live?'>':' ');c.text(7,y+3,text,live?color::StepOn:color::Muted);
-            if(i==p_.songLength){c.text(34,y+3,"+ ADD SCENE",color::StepAccent);continue;}
+            snprintf(text,sizeof(text),"%02d%c",i+1,live?'>':' ');c.text(7,y+3,text,live?color::Playhead:color::Muted);
+            if(i==p_.songLength){c.text(34,y+3,"+ ADD SCENE",color::StepAccent);return;}
             c.fillRect(32,y+3,3,8,style::tracks[p_.song[i].scene%6]);
             snprintf(text,sizeof(text),"SCENE %02u",p_.song[i].scene+1);c.text(41,y+3,text,selected&&!songField_?color::StepAccent:color::Text);
             snprintf(text,sizeof(text),"x%u",p_.song[i].repeats);c.text(173,y+3,text,selected&&songField_?color::StepAccent:color::Muted);
-        }
+            if(live)c.fillRect(3,y,2,13,color::Playhead);
+            if(pinned)c.fillRect(3,y+13,234,1,color::Playhead);
+        };
+        if(viewport.pinned)row(viewport.live,31,true);
+        for(int r=0;r<viewport.count && viewport.first+r<kSongEntries && viewport.first+r<=p_.songLength;++r)
+            row(viewport.first+r,31+(r+viewport.pinned)*14,false);
         if(!p_.songLength)c.text(9,66,"Opt > Actions > Insert scene",color::Muted);
-        style::footer(c,"Fn Enter add  Enter play  Esc menu");
+        style::footer(c,viewport.following?"FOLLOW  Fn Enter add  Enter play":"F follow  Fn Enter add  Enter play");
     }else{
         style::header(c,"MIXER",playing?"PLAY":"STOP");
         for(int i=0;i<=kTracks;++i){

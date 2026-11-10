@@ -112,6 +112,11 @@ All parameters are also listed in SETTINGS.
 
 See the [arrangement and mixer guide](stage-4.md) for the pattern-to-song workflow.
 
+Scenes and Song automatically scroll to the playing row. Browsing other rows pins
+the playing row at the top when needed. **F** resumes following; the edit selection
+stays separate. The minimap uses magenta for playback and a white underline for
+the edit cursor; Scenes also marks a queued launch in amber.
+
 ## Sampler: files and waveform
 
 `Fn+B` opens files; `Fn+P` switches CUT/PADS; `Alt` starts/stops the microphone.

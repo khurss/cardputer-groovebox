@@ -1,13 +1,21 @@
 #pragma once
 #include "gb/ui_types.h"
 namespace gb {
+struct ArrangementView {
+    uint8_t first = 0, count = 6;
+    int live = -1;
+    bool pinned = false, following = false;
+};
 class ArrangementUi {
 public:
     ArrangementUi(Project& project, CommandSink sink, void* context) : p_(project), sink_(sink), context_(context) {}
     void onKey(uint8_t screen, char code, bool fn, bool shift);
     void adjustMaster(int delta);
     void draw(Canvas& c, uint8_t screen, bool playing) const;
+    ArrangementView view(uint8_t screen, bool playing) const;
     void setStatus(uint32_t status) {
+        if ((status & (1u << 16)) && !(status_ & (1u << 16)))
+            followScenes_ = followSong_ = true;
         if (status_ != status)
             dirty_ = true;
         status_ = status;
@@ -40,5 +48,6 @@ private:
     Command undo_;
     Scene clipboard_;
     bool undoAvailable_ = false, clipboardFull_ = false, dirty_ = true;
+    bool followScenes_ = true, followSong_ = true;
 };
 }  // namespace gb

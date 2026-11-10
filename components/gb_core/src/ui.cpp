@@ -344,6 +344,7 @@ void AppUi::drawFnMenu(Canvas& c) const {
             row(5, line);
         }
         row(6, "No Fn: Enter launch scene");
+        row(7, "F follow; live row stays visible");
     } else if (screen_ == 3) {
         row(0, "Arrows: row / scene-repeat field");
         row(1, "+/- edit scene or repeats");
@@ -359,6 +360,7 @@ void AppUi::drawFnMenu(Canvas& c) const {
             row(5, line);
         }
         row(6, "No Fn: Enter play song");
+        row(7, "F follow; live row stays visible");
     } else {
         row(0, "Left/right select; up/down level");
         row(1, "+/- selected strip  Shift: 1%");

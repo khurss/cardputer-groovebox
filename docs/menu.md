@@ -33,6 +33,10 @@ Master volume `+` / `−` also works inside the normal menu: 5% per press, or 1%
 instead of 8. Disabled items show their reason in the footer. Copy, paste, undo and
 clear display a result message.
 
+In Scenes and Song, **ACTIONS → Follow playback** (or plain **F**) resumes automatic
+scrolling to the playing row. Browsing another page keeps the playing row pinned
+above the list. See [playback markers and following](stage-4.md#follow-the-playing-scene).
+
 ## Available settings
 
 All workspaces expose master volume, tempo, swing and RGB brightness, plus:

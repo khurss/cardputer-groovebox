@@ -54,6 +54,28 @@ Create your blocks first: `[` / `]` selects one of 16 drum patterns. In Synth,
 
 ![Song arrangement with overview, scene numbers and repeat fields](images/song.png)
 
+### Follow the playing scene
+
+Scenes and Song both show a **magenta play marker above the minimap** and a `>`
+beside the playing row. The **white underline** marks the edit selection; an amber
+mark in Scenes indicates a queued launch. A queued scene becomes the play marker
+only when it actually starts. Song marks the exact song row, even when several
+rows use the same scene.
+
+Playback starts with **FOLLOW** enabled. The list automatically changes pages to
+keep the playing scene/song row visible. Arrows or edits switch to browsing without
+moving the playback position. If the playing row is outside the browsing page,
+it is **pinned at the top**, with a magenta separator.
+
+![Playing song row pinned above a different edit selection](images/song-follow-browse.png)
+
+Press **F** without Fn, or choose **Opt → ACTIONS → Follow playback**, to resume
+automatic scrolling. The `EDIT` number in the header remains your selected scene
+or song row: following does not change an edit target, project data, or the row
+used by Enter/Space to start playback. After stopping, the list returns to the
+edit selection and the play marker disappears. A scene loop shows no false Song
+play marker.
+
 A project holds 16 scenes and up to 64 song entries, each with 1–255 repeats.
 An empty scene lasts one bar. Patterns are shared: editing P01 changes it in every
 scene that uses it. Opening Drums/Synth after selecting a scene edits that scene's
@@ -106,11 +128,13 @@ python3 -m unittest discover -s tools -p 'test_*.py'
 tools/idf.sh firmware build
 python3 tools/slot.py install-app firmware/build/groovebox.bin
 python3 tools/device_arrangement_test.py --stress
+python3 tools/device_follow_test.py
 python3 tools/device_synth_test.py
 python3 tools/device_test.py
 ```
 
 USB command `A` prints scenes, song entries and mixer; `I` includes arpeggiator
-settings; `S` includes active/queued scene and song state. After an interrupted test,
+settings; `S` includes active/queued scene and song state. `A` also reports each
+list's first row, live row, pin/follow state and edit selection. After an interrupted test,
 stop transport and send `T end`. Follow the
 [installation requirements](../README.md#build-and-install).

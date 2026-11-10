@@ -38,7 +38,7 @@ the menu from a main workspace. [Follow the full first-track guide →](docs/qui
 | **Performance** | Play four keyboard rows as strings, with legato, held-note return, root/scale selection, six presets and animated pitch trails |
 | **Arpeggiator** | Turn live or recorded chords into Up, Down or UpDown patterns with rate, octave and gate controls |
 | **Sampler** | Import WAV from microSD or record the microphone; select and chop waveforms into 32 sample slots for eight sequencer pads |
-| **Scenes and Song** | Combine six tracks into 16 scenes and arrange up to 64 song entries with repeats |
+| **Scenes and Song** | Combine six tracks into 16 scenes and up to 64 song entries; minimap play markers and scrolling keep the playing row visible |
 | **Mixer** | Set master and six track levels, with per-track mute and solo |
 | **Audio visuals and RGB** | Master FFT mixer, spectrum/wave/waterfall/orbit modes, four palettes and audio-reactive LED |
 | **Projects** | Create named `.gbp` files, autosave, keep a backup, save copies and reopen your last project |
