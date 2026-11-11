@@ -8,7 +8,7 @@ audio live on microSD.
 
 [Quick start](docs/quick-start.md) · [Controls](docs/controls.md) ·
 [Documentation](docs/README.md) · [Demo projects](examples/README.md) ·
-[Build and install](#build-and-install)
+[Build and install](#build-and-install) · [License](#license)
 
 ![Cardputer Groovebox interface: Performance synthesizer, drum sequencer, piano roll, sound editor, mixer and song arrangement](docs/images/interface.png)
 
@@ -146,3 +146,21 @@ results and the individual guides for feature-specific checks.
 The string layout and legato interaction are inspired by
 [CHARL3X's GLIDE Synth for Cardputer ADV](https://github.com/CHARL3X/GLIDE-Synth-Cardputer-ADV).
 Groovebox uses its own DSP, visuals and presets; it is an independent implementation.
+
+## License
+
+Cardputer Groovebox is licensed under the [MIT License](LICENSE).
+Copyright © 2026 [xurs (khurss)](https://github.com/khurss).
+
+You may use, modify and redistribute the code, including in commercial and
+closed-source products. Copies or substantial portions of the software must retain
+the copyright notice and the MIT license text. For binary distributions, include
+them in the accompanying license file or third-party notices.
+
+A visible credit in your README, documentation or About screen is appreciated,
+but is not an additional license requirement. Suggested wording:
+
+> Based on [Cardputer Groovebox](https://github.com/khurss/cardputer-groovebox)
+> by [xurs (khurss)](https://github.com/khurss), licensed under MIT.
+
+Third-party dependencies retain their own licenses and attribution requirements.
