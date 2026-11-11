@@ -19,7 +19,7 @@ at **Opt → SCREENS → Quick start**, or follow the illustrated guide below.
 | [Arrangement and mixer](stage-4.md) | Patterns → scenes → songs, levels and arpeggiation |
 | [Audio visuals and RGB](audio-visuals.md) | Equalizer FFT, four animations, palettes and LED feedback |
 | [Sampler](stage-5-sampler.md) | WAV import, live microphone recording, slicing and pads |
-| [Demo songs](../examples/README.md) | Nine original synthwave, techno, hard techno and drum and bass projects with audio previews |
+| [Demo songs](../examples/README.md) | Eleven original synthwave, techno, hard techno, darksynth and drum and bass projects with audio previews |
 
 ## Design and development
 

@@ -64,3 +64,32 @@ TEST(hardTechnoDemosHaveDistinctRiffsAndDrivenFourOnTheFloorDrops) {
     CHECK_EQ(std::strcmp(demoName(7),"steel-rush"),0);
     CHECK_EQ(std::strcmp(demoName(8),"redline-foundry"),0);
 }
+TEST(darkSynthDemosKeepSteelRushBeatsAndGiveTheLeadItsOwnMelody) {
+    static Project steel,a,b;
+    makeDemoProject(7,steel);makeDemoProject(9,a);makeDemoProject(10,b);
+    for(const auto* p:{&a,&b}) {
+        CHECK_EQ(p->bpm,steel.bpm);CHECK_EQ(p->swing,steel.swing);
+        CHECK_EQ(std::memcmp(p->sounds,steel.sounds,sizeof(steel.sounds)),0);
+        CHECK_EQ(std::memcmp(p->drums,steel.drums,sizeof(steel.drums)),0);
+        CHECK_EQ(std::memcmp(p->song,steel.song,sizeof(steel.song)),0);
+        CHECK_EQ(p->mixer[0].volume,steel.mixer[0].volume);
+        CHECK_EQ(p->mixer[4].volume,100);
+        CHECK_EQ(p->synths[3].glide>0,true);CHECK_EQ(p->synths[3].sustain>=90,true);
+        for(int pat=0;pat<16;++pat) {
+            const auto& bass=p->instruments[0][pat];const auto& old=steel.instruments[0][pat];
+            CHECK_EQ(bass.noteCount,old.noteCount);
+            for(unsigned n=0;n<bass.noteCount;++n) {
+                CHECK_EQ(bass.notes[n].startTick,old.notes[n].startTick);
+                CHECK_EQ(bass.notes[n].lengthTicks,old.notes[n].lengthTicks);
+                CHECK_EQ(bass.notes[n].velocity,old.notes[n].velocity);
+            }
+            const auto& lead=p->instruments[3][pat];CHECK_EQ(lead.noteCount>0,true);
+            for(unsigned n=1;n<lead.noteCount;++n)
+                CHECK_EQ(lead.notes[n-1].startTick+lead.notes[n-1].lengthTicks<=lead.notes[n].startTick,true);
+            if(pat>=4 && pat<8)CHECK_EQ(lead.noteCount,6);
+        }
+        for(const auto& scene:p->scenes)CHECK_EQ(scene.pattern[4]>=0,true);
+    }
+    CHECK_EQ(a.synths[3].wave!=b.synths[3].wave,true);
+    CHECK_EQ(std::memcmp(a.instruments[3][4].notes,b.instruments[3][4].notes,6*sizeof(Note))!=0,true);
+}

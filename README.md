@@ -63,12 +63,12 @@ and song audio with saturated, held colors and adjustable brightness.
 Bare arrows navigate editors and menus; Performance preserves their musical keys.
 The synth opens in Performance by default. [Visuals, controls and RGB details →](docs/audio-visuals.md)
 
-## Synthwave, techno, hard techno and drum and bass demo songs
+## Synthwave, darksynth, techno and drum and bass demo songs
 
-**Projects → Add demo songs** installs nine original, complete arrangements without
-overwriting existing files: three retrowave/synthwave, two techno, two hard techno and two drum and
-bass tracks. Each uses 29 song entries and 16 scenes, with built-in drums and synths
-and no external samples.
+**Projects → Add demo songs** installs eleven original, complete arrangements without
+overwriting existing files: three retrowave/synthwave, two techno, two hard techno,
+two drum and bass tracks, and two hard techno/darksynth hybrids. Each uses 29 song
+entries and 16 scenes, with built-in drums and synths and no external samples.
 
 | Project | Style | Tempo / key | Length |
 |---|---|---|---|
@@ -81,6 +81,8 @@ and no external samples.
 | [Liquid Signal](examples/projects/liquid-signal.gbp) | Melodic liquid drum and bass | 170 BPM / G minor | ≈3:23 |
 | [Steel Rush](examples/projects/steel-rush.gbp) | Hard techno with a driven kick, rolling bass and acid riff | 154 BPM / F♯ minor | ≈3:19 |
 | [Redline Foundry](examples/projects/redline-foundry.gbp) | Industrial hard techno with galloping bass and sharp stabs | 162 BPM / D minor | ≈3:10 |
+| [Shadow Foundry](examples/projects/shadow-foundry.gbp) | Steel Rush beats with a gliding darksynth saw lead and minor-key pads | 154 BPM / F♯ minor | ≈3:19 |
+| [Black Neon](examples/projects/black-neon.gbp) | Steel Rush beats with a syncopated darksynth square lead | 154 BPM / D minor | ≈3:19 |
 
 Load a demo, then press **Fn+4 → Enter** to play the song. Demos start at **5% master
 volume**. [Listen to previews and explore the arrangements →](examples/README.md)

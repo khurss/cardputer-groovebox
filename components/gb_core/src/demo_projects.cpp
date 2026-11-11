@@ -252,11 +252,63 @@ void makeHardTechnoProject(unsigned style,Project& p) {
         p.song[p.songLength++]={uint8_t(sections[section]+phrase),uint8_t(repeats[section])};
     p.song[p.songLength++]={12,4};
 }
+void makeDarkSynthProject(unsigned style,Project& p) {
+    // Keep Steel Rush's tempo, complete drum programming, drum sounds and bass rhythm.
+    makeHardTechnoProject(0,p);
+    constexpr int oldRoots[]={30,30,26,28};
+    constexpr int roots[2][4]={{30,26,33,28},{38,34,29,33}};
+    constexpr int thirds[]={3,4,4,4};
+    // T1 pulse bass, T2 two-note pad, T3 plucked arp, T4 foreground darksynth lead.
+    p.synths[1]={Waveform::Saw,20,40,88,8,64,12,0,54};
+    p.synths[2]={Waveform::Triangle,0,28,16,3,112,8,0,76};
+    p.synths[3]={Waveform::Saw,2,36,100,6,96,32,34,116};
+    if(style) {
+        p.synths[1]={Waveform::Triangle,27,44,92,8,83,8,0,70};
+        p.synths[2]={Waveform::Saw,0,20,12,3,88,26,0,54};
+        p.synths[3]={Waveform::Square,1,30,94,6,83,38,26,105};
+    }
+    p.mixer[2].volume=54;p.mixer[3].volume=58;p.mixer[4].volume=100;
+    for(int t=0;t<kInstrumentTracks;++t)p.keyboardRoot[t]=roots[style][0]%12;
+    constexpr int starts[2][6]={{0,72,96,144,240,288},{0,48,120,192,240,312}};
+    constexpr int melodies[2][4][6]={
+        {{12,7,10,7,3,0},{7,12,7,4,2,0},{12,11,7,4,7,12},{7,5,4,2,11,12}},
+        {{0,7,12,10,7,3},{12,7,4,2,0,7},{7,12,11,7,4,0},{12,10,7,4,11,12}}
+    };
+    for(int phrase=0;phrase<4;++phrase)for(int section=0;section<4;++section) {
+        const int pat=section*4+phrase,root=roots[style][phrase],third=thirds[phrase];
+        const bool drop=section==1,intro=section==2,breakdown=section==3;
+        auto& bass=p.instruments[0][pat];
+        for(unsigned n=0;n<bass.noteCount;++n)bass.notes[n].pitch+=root-oldRoots[phrase];
+        for(int t=1;t<kInstrumentTracks;++t)p.instruments[t][pat]=InstrumentPattern{};
+        auto& pad=p.instruments[1][pat];auto& arp=p.instruments[2][pat];auto& lead=p.instruments[3][pat];
+        // Two notes leave space for bass, arp and lead within the five-voice budget.
+        note(pad,0,372,root+24+third,drop?70:62);note(pad,0,372,root+31,drop?64:56);
+        const int tones[]={0,7,12,third,7,12,10,7};
+        for(int n=0;n<8;++n) {
+            if((intro || breakdown) && n%2)continue;
+            note(arp,n*48+(style?24:0),18,root+36+tones[(n+phrase+style*2)%8],drop?66:48);
+        }
+        if(breakdown) {
+            note(lead,0,138,root+43,86);note(lead,192,180,root+36,90);
+        } else if(intro) {
+            note(lead,48,90,root+36+melodies[style][phrase][0],74);
+            note(lead,240,132,root+36+melodies[style][phrase][5],80);
+        } else {
+            for(int n=0;n<6;n+=drop?1:2) {
+                const int next=n+(drop?1:2),end=next<6?starts[style][next]:384;
+                note(lead,starts[style][n],end-starts[style][n]-6,
+                     root+36+melodies[style][phrase][n],drop?(n%2?105:116):94);
+            }
+        }
+    }
+    for(auto& scene:p.scenes)scene.pattern[4]=scene.pattern[0];
 }
-const char* demoName(unsigned i){constexpr const char* names[]={"neon-drive","sunset-arcade","midnight-run","circuit-pressure","concrete-pulse","night-transit","liquid-signal","steel-rush","redline-foundry"};static_assert(sizeof(names)/sizeof(names[0])==kDemoCount);return i<kDemoCount?names[i]:"";}
+}
+const char* demoName(unsigned i){constexpr const char* names[]={"neon-drive","sunset-arcade","midnight-run","circuit-pressure","concrete-pulse","night-transit","liquid-signal","steel-rush","redline-foundry","shadow-foundry","black-neon"};static_assert(sizeof(names)/sizeof(names[0])==kDemoCount);return i<kDemoCount?names[i]:"";}
 bool makeDemoProject(unsigned index,Project& p){
     if(index>=kDemoCount)return false;
     new (&p) Project{};initProject(p);p.masterVolume=5;
+    if(index>=9) { makeDarkSynthProject(index-9,p);return true; }
     if(index>=7) { makeHardTechnoProject(index-7,p);return true; }
     if(index>=3) { makeDanceProject(index-3,p);return true; }
     constexpr int tempos[]={108,92,122};p.bpm=tempos[index];p.swing=index==1?54:50;
