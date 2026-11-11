@@ -21,6 +21,11 @@ bool setRgb(uint32_t rgb);
 // Moves one audio block out and one in. Both buffers hold kBlockFrames stereo frames.
 bool exchangeAudio(const int16_t* output, int16_t* input);
 AudioStats audioStats();
+struct AudioOutputConfig {
+    uint8_t volume = 0, control = 0, drc = 0, eq = 0;
+};
+// Read-only ES8311 diagnostics; call from the UI/I2C thread.
+bool readAudioOutputConfig(AudioOutputConfig& config);
 
 struct KeyEvent {
     char code;

@@ -151,11 +151,113 @@ void makeDanceProject(unsigned style,Project& p) {
         p.song[p.songLength++]={uint8_t(sections[section]+phrase),uint8_t(style>=2?dnbRepeats[section]:technoRepeats[section])};
     p.song[p.songLength++]={12,4};
 }
+void makeHardTechnoProject(unsigned style,Project& p) {
+    p.bpm=style?162:154;p.swing=50;
+    constexpr int roots[2][4]={{30,30,26,28},{38,38,34,36}};
+    // Driven kick body and harmonic bass remain useful on the small speaker.
+    // Bass starts between kicks; five simultaneous synth voices at most.
+    p.sounds[0]={uint8_t(style?62:54),uint8_t(style?78:84),uint8_t(style?124:116),127};
+    p.sounds[1]={76,46,104,98};p.sounds[2]={66,52,108,85};
+    p.sounds[3]={87,19,113,65};p.sounds[4]={78,35,112,69};
+    p.sounds[5]={48,42,100,88};p.sounds[6]={86,27,112,78};p.sounds[7]={59,38,105,68};
+    p.synths[0]={Waveform::Saw,0,28,72,2,67,42,8,104};
+    p.synths[1]={Waveform::Square,0,21,14,3,87,24,0,66};
+    p.synths[2]={Waveform::Saw,0,24,24,3,78,76,14,78};
+    p.synths[3]={Waveform::Triangle,0,21,12,3,110,16,0,92};
+    if(style) {
+        p.synths[0]={Waveform::Square,0,23,60,2,76,36,6,99};
+        p.synths[1]={Waveform::Saw,0,16,8,2,100,49,0,62};
+        p.synths[2]={Waveform::Square,0,27,36,4,69,90,18,73};
+        p.synths[3]={Waveform::Saw,1,18,16,3,95,35,10,68};
+    }
+    const int levels[]={96,88,66,74,64,100};
+    for(int t=0;t<kTracks;++t)p.mixer[t].volume=levels[t];
+    for(int t=0;t<kInstrumentTracks;++t) {
+        p.keyboardLayout[t]=1;p.keyboardRoot[t]=roots[style][0]%12;p.keyboardScale[t]=2;
+    }
+    for(int phrase=0;phrase<4;++phrase) {
+        const int root=roots[style][phrase];
+        for(int section=0;section<4;++section) {
+            const int pat=section*4+phrase;
+            const bool drop=section==1,intro=section==2,breakdown=section==3;
+            auto& d=p.drums[pat];
+            if(!breakdown) {
+                for(int step=0;step<16;++step) {
+                    if(step%4==0)hit(d,0,step,step==0?127:122);
+                    if(step%2==0 || drop)hit(d,3,step,step%4==2?78:step%2?40:55);
+                    if(step==4 || step==12) {
+                        if(!intro || phrase>=2)hit(d,1,step,105);
+                        if(drop)hit(d,2,step,94);
+                    }
+                    if(!intro && step%4==2)hit(d,4,step,82);
+                }
+                if(!intro) {
+                    hit(d,5,style?3:7,82);hit(d,6,style?11:3,76);hit(d,7,14,66);
+                    if(drop) {hit(d,5,10,88);hit(d,6,15,82);}
+                }
+                if(phrase==3 && !intro) {hit(d,1,13,62);hit(d,1,14,86);hit(d,1,15,111);}
+            } else {
+                hit(d,6,6,44);hit(d,7,14,52);
+                if(phrase==3)for(int step=8;step<16;++step)hit(d,1,step,48+(step-8)*10);
+            }
+            auto& bass=p.instruments[0][pat];auto& stab=p.instruments[1][pat];
+            auto& acid=p.instruments[2][pat];auto& reply=p.instruments[3][pat];
+            if(!intro && !breakdown) {
+                if(!style) {
+                    for(int beat=0;beat<4;++beat) {
+                        note(bass,beat*96+30,18,root,94);
+                        note(bass,beat*96+54,36,root+(drop && beat==3?12:0),116);
+                    }
+                } else {
+                    const int steps[]={1,3,5,6,9,11,13,14},offsets[]={0,12,0,7,0,0,12,7};
+                    for(int n=0;n<8;++n)note(bass,steps[n]*24,18,root+offsets[(n+phrase)%8],n%2?117:92);
+                }
+            }
+            if(breakdown) {
+                note(stab,0,156,root+27,60);note(stab,0,156,root+31,54);
+                note(stab,192,156,root+27,64);note(stab,192,156,root+34,58);
+                note(reply,48,90,root+43,64);note(reply,240,114,root+39,70);
+            } else {
+                const int steps[]={2,6,10,14};
+                for(int n=0;n<4;++n) {
+                    if(intro && n!=phrase%4)continue;
+                    const int start=steps[n]*24+(style?12:0);
+                    note(stab,start,style?12:22,root+27,drop?88:62);
+                    note(stab,start,style?12:22,root+31,drop?76:54);
+                }
+                if(drop) {
+                    const int stepsA[]={3,7,11,15},stepsB[]={2,5,10,13};
+                    for(int n=0;n<4;++n)note(reply,(style?stepsB[n]:stepsA[n])*24,18,
+                        root+36+(n%2?7:12),n%2?76:87);
+                }
+            }
+            const int riff[2][8]={{0,12,7,0,3,12,10,7},{0,7,12,3,0,10,7,12}};
+            for(int n=0;n<8;++n) {
+                if((intro || breakdown) && n%4!=0)continue;
+                if(!drop && !intro && !breakdown && n%2)continue;
+                note(acid,n*48+(style?12:0),drop && n%3==0?42:18,
+                     root+24+riff[style][(n+phrase)%8],drop?(n%3?92:118):67);
+            }
+        }
+        const int sections[]={2,0,1,3};
+        for(int bank=0;bank<4;++bank) {
+            const int pat=sections[bank]*4+phrase;auto& scene=p.scenes[bank*4+phrase];
+            scene.pattern[0]=pat;scene.pattern[2]=pat;scene.pattern[3]=pat;
+            if(bank==1 || bank==2)scene.pattern[1]=pat;
+            if(bank>=2)scene.pattern[4]=pat;
+        }
+    }
+    const int sections[]={0,4,4,8,12,8,0},repeats[]={4,4,4,8,2,6,3};
+    for(int section=0;section<7;++section)for(int phrase=0;phrase<4;++phrase)
+        p.song[p.songLength++]={uint8_t(sections[section]+phrase),uint8_t(repeats[section])};
+    p.song[p.songLength++]={12,4};
 }
-const char* demoName(unsigned i){constexpr const char* names[]={"neon-drive","sunset-arcade","midnight-run","circuit-pressure","concrete-pulse","night-transit","liquid-signal"};static_assert(sizeof(names)/sizeof(names[0])==kDemoCount);return i<kDemoCount?names[i]:"";}
+}
+const char* demoName(unsigned i){constexpr const char* names[]={"neon-drive","sunset-arcade","midnight-run","circuit-pressure","concrete-pulse","night-transit","liquid-signal","steel-rush","redline-foundry"};static_assert(sizeof(names)/sizeof(names[0])==kDemoCount);return i<kDemoCount?names[i]:"";}
 bool makeDemoProject(unsigned index,Project& p){
     if(index>=kDemoCount)return false;
     new (&p) Project{};initProject(p);p.masterVolume=5;
+    if(index>=7) { makeHardTechnoProject(index-7,p);return true; }
     if(index>=3) { makeDanceProject(index-3,p);return true; }
     constexpr int tempos[]={108,92,122};p.bpm=tempos[index];p.swing=index==1?54:50;
     // Root motion: A minor / F / C / G; D minor / Bb / F / C; E minor / C / G / D.

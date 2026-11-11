@@ -1,6 +1,7 @@
-# Original synthwave, techno and drum and bass demo projects
+# Original synthwave, techno, hard techno and drum and bass demo projects
 
-Seven complete songs for Cardputer Groovebox, in GBP v5 format. Their melodies and
+Nine complete songs for Cardputer Groovebox: the first seven are GBP v5, and the
+two hard techno songs are GBP v6. All load in the current firmware. Their melodies and
 arrangements were generated for this project; no external recordings or sample
 files are required. [Project overview](../README.md) · [Documentation](../docs/README.md)
 
@@ -13,9 +14,12 @@ files are required. [Project overview](../README.md) · [Documentation](../docs/
 | [Concrete Pulse](projects/concrete-pulse.gbp) | Industrial-inspired techno: four-on-the-floor kick, toms, rims and short stabs | 140 BPM, F minor | ≈3:12 |
 | [Night Transit](projects/night-transit.gbp) | Dark rolling drum and bass: broken kicks, snare ghosts and sliding saw bass | 174 BPM, D minor | ≈3:19 |
 | [Liquid Signal](projects/liquid-signal.gbp) | Liquid drum and bass: sine sub-bass, warm two-note pads and melodic answers | 170 BPM, G minor | ≈3:23 |
+| [Steel Rush](projects/steel-rush.gbp) | Hard techno: driven kick, rolling offbeat saw bass and accented acid riff | 154 BPM, F♯ minor | ≈3:19 |
+| [Redline Foundry](projects/redline-foundry.gbp) | Industrial hard techno: galloping square bass, metallic percussion and short stabs | 162 BPM, D minor | ≈3:10 |
 
 Each song has **29 Song entries and 16 scenes**. The synthwave songs have 82 bars,
-the techno songs 112 bars, and the drum and bass songs 144 bars. All include an
+the techno songs 112 bars, the drum and bass songs 144 bars, and the hard techno
+songs 128 bars. All include an
 intro, groove, build, chorus/drop, breakdown, final chorus/drop, outro and a tonic
 ending. T1 is bass, T2 two-voice pad/stabs, T3 notated arpeggio/hook and T4 lead or
 melodic response. Drums and synths are generated on the device; the drum and bass
@@ -62,7 +66,7 @@ scene that uses that pattern. See [arrangement and mixer](../docs/stage-4.md).
 
 ## Techno and drum and bass arrangement map
 
-The four new songs use these sections, with different notes, sound settings and
+The four techno and drum and bass songs use these sections, with different notes, sound settings and
 rhythms. Intro and breakdown omit the bass; drops bring all four synth tracks in.
 Techno keeps a kick on each beat. Drum and bass uses syncopated kick placements,
 backbeats on beats two/four and quieter snare ghost notes. Every fourth drum
@@ -85,6 +89,31 @@ saw bass and sharper synth responses. Liquid Signal pairs sine sub-bass with lon
 pads and a more melodic hook. The sound engine's existing envelopes, filter and
 glide settings supply the timbres; these files do not require extra effects.
 
+## Hard techno arrangement map
+
+Steel Rush and Redline Foundry keep a kick on every beat, with strong drive from
+the kick's Tone setting. Short bass notes leave gaps around the kick. Saw/square
+bass harmonics give the low part definition beyond the fundamental; neither song
+relies on a sine sub-bass alone. Drops add sixteenth-note hats, layered clap/snare,
+acid-style accents and a fourth synth response. Each fourth phrase has a drum fill.
+
+| Song rows | Scenes | Bars | Section |
+|---|---|---|---|
+| 01–04 | 01–04 | 16 | DJ-style intro: kick, hats and sparse stabs |
+| 05–08 | 05–08 | 16 | Bass groove |
+| 09–12 | 05–08 | 16 | Groove continuation before the drop |
+| 13–16 | 09–12 | 32 | Full first drop |
+| 17–20 | 13–16 | 8 | Kick/bass break with a closing snare roll |
+| 21–24 | 09–12 | 24 | Final drop |
+| 25–28 | 01–04 | 12 | DJ-style outro |
+| 29 | 13 | 4 | Tonic ending, then stop |
+
+Steel Rush uses two offbeat bass notes per beat and a saw acid motif. Redline
+Foundry uses a syncopated octave/fifth square-bass pattern, shorter stabs and
+different percussion and response notes. Both use all 16 pattern slots and scenes,
+and need at most five written synth voices at once. They need no sample files or
+additional effects. EQ starts flat and MAIN starts at 5%.
+
 ## Listen and regenerate
 
 Twenty-second chorus previews:
@@ -94,17 +123,25 @@ Twenty-second chorus previews:
 [Circuit Pressure WAV](previews/circuit-pressure.wav) ·
 [Concrete Pulse WAV](previews/concrete-pulse.wav) ·
 [Night Transit WAV](previews/night-transit.wav) ·
-[Liquid Signal WAV](previews/liquid-signal.wav).
+[Liquid Signal WAV](previews/liquid-signal.wav) ·
+[Steel Rush WAV](previews/steel-rush.wav) ·
+[Redline Foundry WAV](previews/redline-foundry.wav).
 
 ```bash
-make demos         # regenerate all seven projects in the current GBP v6 format
+make demos         # regenerate all nine projects in the current GBP v6 format
 make render-demos  # full WAVs in build/demo-audio; excerpts in build/demo-previews
 ```
 
 Generation is deterministic. Full WAV renders are checked for song completion,
 nonzero signal, the 5% output ceiling and event-queue overflows. New previews start
 at the first drop (Song row 13) and have short edge fades without normalization.
-To render only the four dance demos into the published preview directory:
+Both hard techno full renders finish at the expected song length plus one second
+of release tail, with a peak of 1556 PCM counts and no event overflows. A device
+run of all nine demos across all eight workspaces passed at 5% output, with no
+new audio errors and peak DSP load of 27.4%. The user's regular project and backup
+were verified unchanged.
+
+To render only the six dance demos into the published preview directory:
 
 ```bash
 make build/render_demos

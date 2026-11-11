@@ -111,6 +111,9 @@ bool initAudio() {
     if (i2s_channel_enable(tx) != ESP_OK || i2s_channel_enable(rx) != ESP_OK) return false;
 
     // Register 0x01 combines the DAC-only (0xB5) and ADC-only (0xBA) clock masks.
+    // ES8311 register 0x32: 0xBF is unity (0 dB), NOT a 75% volume limit.
+    // 0xFF would add +32 dB after our limiter. Master volume stays in the DSP.
+    // See ES8311 User Guide, section 11.3 (DAC volume and DRC).
     static const uint8_t init[][2] = {
         {0x00, 0x80}, {0x01, 0xBF}, {0x02, 0x18}, {0x0D, 0x01}, {0x0E, 0x02}, {0x12, 0x00},
         {0x13, 0x10}, {0x14, 0x18}, {0x17, 0xBF}, {0x1C, 0x6A}, {0x32, 0xBF}, {0x37, 0x08},
@@ -154,6 +157,11 @@ bool exchangeAudio(const int16_t* output, int16_t* input) {
 }
 
 AudioStats audioStats() { return {txOverflows, rxOverflows}; }
+bool readAudioOutputConfig(AudioOutputConfig& config) {
+    return codec && readRegister(codec,0x32,config.volume) &&
+        readRegister(codec,0x31,config.control) && readRegister(codec,0x34,config.drc) &&
+        readRegister(codec,0x37,config.eq);
+}
 
 bool pollKey(KeyEvent& event) {
     uint8_t count = 0;

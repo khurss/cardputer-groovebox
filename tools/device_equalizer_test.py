@@ -9,7 +9,7 @@ from device_synth_test import stress_project, reopen
 from device_menu_test import page, row
 
 
-def fixture():
+def fixture(synth_level=10):
     body = bytearray(stress_project(120)[14:])
     for pattern in range(16):
         body[42+pattern*130:170+pattern*130] = bytes(128)
@@ -18,7 +18,7 @@ def fixture():
     # A sustained, quiet B5 sine (987.77 Hz), close to the 1 kHz EQ band.
     body[2120:2123] = bytes((16, 0, 1))
     struct.pack_into('<HHBB', body, 2123, 0, 1536, 83, 100)
-    body[27097:27106] = bytes((0, 0, 0, 127, 0, 127, 0, 0, 10))
+    body[27097:27106] = bytes((0, 0, 0, 127, 0, 127, 0, 0, synth_level))
     return b'GBPJ' + struct.pack('<HII', 2, len(body), zlib.crc32(body)) + body
 
 

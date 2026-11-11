@@ -10,7 +10,7 @@ TEST(demoSongsAreCompleteBoundedAndEndWithoutMissingSamples){
     for(unsigned demo=0;demo<kDemoCount;++demo){
         CHECK_EQ(makeDemoProject(demo,p),true);CHECK_EQ(isValidProject(p),true);CHECK_EQ(p.masterVolume,5);CHECK_EQ(p.songLength,29);
         unsigned bars=0;for(unsigned i=0;i<p.songLength;++i)bars+=p.song[i].repeats;
-        const unsigned expectedBars=demo<3?82:demo<5?112:144;CHECK_EQ(bars,expectedBars);
+        const unsigned expectedBars=demo<3?82:demo<5?112:demo<7?144:128;CHECK_EQ(bars,expectedBars);
         Sequencer s(p,32000);s.playSong(0);Event events[128];unsigned hits=0,notes=0;uint64_t frames=0;
         const uint64_t maximum=uint64_t(32000)*240*(bars+1)/p.bpm;
         while(s.playing() && frames<maximum){const auto n=s.render(256,events,128);for(unsigned i=0;i<n;++i){hits+=events[i].type==EventType::DrumHit;notes+=events[i].type==EventType::NoteOn;}frames+=256;}
@@ -34,7 +34,7 @@ TEST(danceDemosKeepGenreRhythmsAndRoundTripTheirWholeArrangements) {
         }
         const auto& drop=p.drums[p.scenes[8].pattern[0]];
         CHECK_EQ(drop.velocity[1][4]>0 && drop.velocity[1][12]>0,true);
-        if(demo<5)for(int beat=0;beat<16;beat+=4)CHECK_EQ(drop.velocity[0][beat]>0,true);
+        if(demo<5 || demo>=7)for(int beat=0;beat<16;beat+=4)CHECK_EQ(drop.velocity[0][beat]>0,true);
         else {
             CHECK_EQ(p.bpm>=170,true);CHECK_EQ(drop.velocity[0][4],0);
             CHECK_EQ(drop.velocity[0][6]>0 || drop.velocity[0][7]>0,true);
@@ -44,4 +44,23 @@ TEST(danceDemosKeepGenreRhythmsAndRoundTripTheirWholeArrangements) {
         CHECK_EQ(p.scenes[8].pattern[1]>=0,true);        // bass enters the drop
         CHECK_EQ(p.scenes[12].pattern[1],kEmptyPattern);// breakdown clears the low end
     }
+}
+TEST(hardTechnoDemosHaveDistinctRiffsAndDrivenFourOnTheFloorDrops) {
+    static Project a,b;
+    CHECK_EQ(makeDemoProject(7,a),true);CHECK_EQ(makeDemoProject(8,b),true);
+    CHECK_EQ(a.bpm,154);CHECK_EQ(b.bpm,162);
+    for(const auto* p:{&a,&b}) {
+        CHECK_EQ(p->sounds[0].tone>=110,true);CHECK_EQ(p->sounds[0].level,127);
+        CHECK_EQ(p->synths[0].wave==Waveform::Sine,false);
+        const auto& d=p->drums[p->scenes[8].pattern[0]];
+        for(int beat=0;beat<16;beat+=4)CHECK_EQ(d.velocity[0][beat]>=120,true);
+        for(int step=0;step<16;++step)CHECK_EQ(d.velocity[3][step]>0,true);
+        CHECK_EQ(p->instruments[0][4].noteCount,8);
+        CHECK_EQ(p->instruments[3][4].noteCount>0,true);
+        CHECK_EQ(p->drums[15].velocity[0][0],0);
+        CHECK_EQ(p->drums[15].velocity[1][15]>p->drums[15].velocity[1][8],true);
+    }
+    CHECK_EQ(std::memcmp(a.instruments[0][4].notes,b.instruments[0][4].notes,8*sizeof(Note))!=0,true);
+    CHECK_EQ(std::strcmp(demoName(7),"steel-rush"),0);
+    CHECK_EQ(std::strcmp(demoName(8),"redline-foundry"),0);
 }

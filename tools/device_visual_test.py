@@ -36,8 +36,8 @@ def checks():
         _, lines = project(d)
         files = [x[5:] for x in lines if x.startswith('FILE ')]
         demos = ('neon-drive', 'sunset-arcade', 'midnight-run', 'circuit-pressure',
-                 'concrete-pulse', 'night-transit', 'liquid-signal')
-        r.check('all seven demos installed', all(name in files for name in demos))
+                 'concrete-pulse', 'night-transit', 'liquid-signal', 'steel-rush', 'redline-foundry')
+        r.check('all nine demos installed', all(name in files for name in demos))
         for name in demos:
             project_row(d, 4 + files.index(name)); d.key('enter'); d.key('enter'); d = switched(d)
             r.check(name + ' loads at 5 percent', name in project(d)[0] and state(d)['master'] == 5 and state(d)['output_limit'] == 5)

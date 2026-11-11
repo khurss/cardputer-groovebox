@@ -114,6 +114,43 @@ Scenes, song entries, levels, mute/solo and arpeggiator settings save to SD.
 The current firmware reads GBP v1–v6 and writes v6. Tests use a separate file and
 do not replace a regular project's volume with the test level.
 
+## Quiet at MAIN 100%?
+
+MAIN 100% means no attenuation at the final volume fader; it does not normalize
+every project or override quieter instruments. The signal path is:
+
+**Note velocity → sound level/envelope/filter → track fader → mix headroom →
+master EQ → peak limiter → MAIN → ES8311 at 0 dB → speaker/headphones.**
+
+1. Open **Fn+5**. Check DRUM and T1..T4/SMP as well as MAIN. For example, a DRUM
+   level of 42% reduces the drum signal by about 7.5 dB, even when MAIN is 100%.
+   Check mute and solo indicators too.
+2. Open **Fn+7** and press **B** to compare with EQ bypassed. Cutting 1–6.3 kHz
+   can make attacks and melodies less prominent. **Shift+0** resets all bands;
+   **Fn+Z** undoes that reset. Compare at a comfortable master level.
+3. In Synth, check **Sound editor → Level**, Sustain and Cutoff. In Drums, check
+   the selected sound's Level and step velocities. A closed filter, low envelope
+   sustain or soft notes can remain quiet with the track fader at 100%.
+4. For bass intended for the small built-in speaker, compare a saw/square sound
+   or a higher octave with a pure low sine. More bass EQ cannot recreate a
+   speaker's missing low-frequency output, and may make the limiter reduce the
+   rest of the mix. The hard techno demos provide harmonic-bass examples.
+
+The synth reserves headroom for five voices. Mix headroom is 0.7 (about −3.1 dB),
+and the limiter ceiling is 0.95 (about −0.45 dBFS). These are fixed gain stages,
+not an accidental 5% cap. Demos intentionally load with MAIN at 5%; set the
+listening level after loading each project. FFT Sensitivity changes only the
+visuals, not the speaker volume.
+
+The ES8311 DAC volume register is **0xBF = 0 dB**, per the manufacturer's
+[ES8311 User Guide, section 11.3](https://files.waveshare.com/wiki/common/ES8311.user.Guide.pdf).
+Setting this register to 0xFF would add 32 dB after the software limiter; it is
+not the correction for a quiet mix. USB command **Q** reads the actual DAC volume,
+mute/control, DRC and hardware-EQ registers along with MAIN, output limit and
+test mode. In normal operation the software output limit is 100%; isolated tests
+use 5%. **S**, **A**, **E** and **L 400** expose transport, mixer, EQ and PCM/mic
+levels for diagnosis. These are digital measurements, not calibrated speaker SPL.
+
 ## Automated checks
 
 Test mode resets master volume to 5% on each boot, regardless of the loaded file.
@@ -122,12 +159,20 @@ An independent ceiling prevents output above 5% even if a test raises the fader.
 levels are also measured, but room noise at this volume is not used as a mandatory
 audibility threshold. The regular project and backup are checked and restored.
 
+The output audit on Cardputer ADV read DAC volume 191 (`0xBF`), control 0, DRC 0
+and hardware EQ 8 (bypass). Normal mode reported an output limit of 100. With a
+steady sine fixture and the independent 5% test ceiling, measured PCM powers were
+36 at MAIN 1%, 1017 at MAIN 5%, and 1017 at MAIN 100% under the test ceiling;
+MAIN 0% was silent. This verifies the gain path and test isolation, not acoustic
+loudness at full speaker output. Run `device_volume_test.py` to repeat the audit.
+
 ```bash
 make test
 python3 -m unittest discover -s tools -p 'test_*.py'
 tools/idf.sh firmware build
 python3 tools/slot.py install-app firmware/build/groovebox.bin
 python3 tools/device_arrangement_test.py --stress
+python3 tools/device_volume_test.py
 python3 tools/device_follow_test.py
 python3 tools/device_synth_test.py
 python3 tools/device_test.py

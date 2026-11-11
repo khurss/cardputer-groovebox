@@ -223,6 +223,11 @@ void runConsoleLine(gb::AppUi& ui, char* line) {
             printf("OK\n");
         } else
             printf("ERR key\n");
+    } else if (strcmp(line,"Q")==0) {
+        hw::AudioOutputConfig config;
+        const bool ok=hw::readAudioOutputConfig(config);
+        printf("AUDIO read_ok=%u dac_volume=%u dac_control=%u dac_drc=%u dac_eq=%u master=%u output_limit=%u test_mode=%u\n",
+            ok,config.volume,config.control,config.drc,config.eq,uiProject.masterVolume,engine->outputLimit(),testMode);
     } else if (strcmp(line,"E")==0) {
         printf("EQ enabled=%u band=%u",uiProject.equalizer.enabled,ui.arrangement().eqBand());
         for(int i=0;i<gb::kEqBands;++i)printf(" g%d=%d",i,uiProject.equalizer.gain[i]);
